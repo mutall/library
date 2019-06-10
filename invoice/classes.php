@@ -919,6 +919,10 @@ abstract class invoice extends page {
         //Create the emailer object, an extension of PHPMailer 
         $this->emailer = new emailer_mutall();
         //
+        //
+        //Add people to receive the email, eg., wycliffe and phyllis
+        //$this->emailer->AddCC('osoro.wycliff@gmail.com')
+        //
         //Retrieve the data that drives the email list
         $results = $this->query();
         //
@@ -1086,32 +1090,16 @@ abstract class record {
     }
 
     //
-    //Returns the type of document and its reference number for reporting as 
-    //as (a) an email subject and  (b) invoice header -- if there is posted 
-    //data.
-    function try_ref(&$ref){
+    //Returns the reference number for reporting as:-
+    //(a) an email subject and  
+    //(b) invoice header
+    function get_ref(){
         //
-        //Test if there is a valid reference
-        if (isset($this->items['rent']->statements['detailed']->results[0])){
-            //
-            //Get the current rent factor, 1, 3 or null, using the first agreement entry
-            $factor = $this->items['rent']->statements['detailed']->results[0]['factor'];
-            //
-            $type = is_null($factor) ? "STATEMENT" : "INVOICE";
-            //
-            //Get the first recrord of the detailed satement of this record's invoice item 
-            $rec = $this->items['invoice']->statements['detailed']->results[0];
-            //
-            //Return the two pieces of of data: document type and its reference number
-            $ref['type'] = $type;
-            $ref['code']= "{$rec['id']}-{$rec['year']}-{$rec['month']}";
-            //
-            return true;    
-        }else{
-            //There is no reference
-            return false;
-        }
-        
+        //Get the first recrord of the detailed satement of this record's invoice item 
+        $rec = $this->items['invoice']->statements['detailed']->results[0];
+        //
+        //Return the two pieces of of data: document type and its reference number
+        return "{$rec['id']}-{$rec['year']}-{$rec['month']}";
     }
     
     //Display this record according to the invoice's layout request
@@ -1149,12 +1137,12 @@ abstract class record {
         $address = $this->result['email'];
         $emailer->addAddress($address);
         //
+        //Add people to receive the email, eg., wycliffe and phyllis
+        //AddCC('osoro.wycliff@gmail.com')
+        //
         //The subject is invoice/statement for the current period -- the same bit
         //that appears in the invoice header
-        $ref = [];
-        $emailer->Subject = $this->try_ref($ref) 
-            ?  $ref['type']." ".$ref['code']
-            :"No posted data found";
+        $emailer->Subject = $this->get_ref() ;
         //
         //The message comes from the display of the record. Collect the message
         //data
@@ -1261,8 +1249,8 @@ abstract class poster extends invoice {
     }
     
     //The n'th cutoff date. When n=0, its the cutoff of the current period; n=1
-    //that of the next period; n=2 thta of the nect next period, etc.; n=-1 that
-    //of the previous period
+    //that of the next period; n=2 that of the next period, etc.; n=-1 that
+    //of the previous period, etc.
     function cutoff($n=0){
         //
         //Let $dayn be the first day of the n'th period
@@ -1309,14 +1297,15 @@ abstract class poster extends invoice {
                 //The driver has expects a primary key field
                 . "client.client as primarykey, "
                 //
-                //For attributing records t implement Camilus search engine
+                //For attributing record tags to implement Camilus search engine
                 . "client.name as name, "
                 //
                 //We needa access to whether clients pay quaterly or monthly in 
                 //order to compute arrears
                  . "client.quarterly, "
                 //
-                //For emailing clients
+                //For emailing clients. Replace this with the client's email 
+                //when ready
                 . "'peterkmuraya@gmail.com' as email "
             . "from "
                 . "client "
@@ -1407,12 +1396,16 @@ abstract class report extends invoice {
         parent::__construct(true);
     }
     
-    //Returns an sql, based on onvoice,  that drives reports
+    //Returns an sql statement, based on this invoice,  that drives this report
     function get_driver_sql() {
         //
         return $this->dbase->chk(
             "select "
-                . "invoice.invoice as primarykey "
+                . "invoice.invoice as primarykey, "
+                //
+                //For attributing record tags to implement Camilus search engine
+                . "client.name "
+                
             . "from "
                 //
                 //The table driving this process 
@@ -1575,7 +1568,7 @@ class statement{
             //
             //Show the item name as a block with color green
             echo "<p class='name'>"
-            . $this->item->name
+            . $this->item->title
             . "</p>";
         }
         //

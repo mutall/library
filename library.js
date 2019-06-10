@@ -2,16 +2,14 @@
 function mutall(input=null){
     //
     //The constant for accessing the mutall data in the global variables in
-    //javascript is imlemented via a global propety, data_id, sinc the keyword
-    //Const is not well spported by some browsers, notably IE
+    //javascript is implemented via a global propety, mutall_id, since the keyword
+    //Const is not well supported by some browsers, notably, I.E.
     this.mutall_id = "mutall";
-    //
-    //How do you register the class name (the same way we did in php)? This is 
-    //important for mutall classes that are created from Js
     //
     //Offload (without activating)the properties in the input to this object, 
     //if valid. The inheriter of this class will activate the properties of
-    //input that it requires
+    //input that it requires. (There is a helper function for offloading but is 
+    //not accessible at this point, so we do it from first principles)
     if (input!==null){
         //
         //Complete the rest of the object
@@ -23,8 +21,8 @@ function mutall(input=null){
         }
     };
     //
-    //mutallify is the activation of any static structure so that its
-    //methods can be accesssed from javascript. Typicaly the static structure will
+    //Actitate the static structure so that its methods can be accesssed from 
+    //javascript. Typicaly the static structure will
     //have come from a php class
     this.activate = function (input_){
         //
@@ -92,15 +90,13 @@ function mutall(input=null){
     //Offload the properies of the given data to this record
     this.offload = function(data){
         //        
-        //Offload the properties of the equivalent field in PHP -- only if they 
-        //are defined in this class
+        //Offload the properties of the equivalent field in PHP and, in future,
+        //only if they are defined in this class.
         for(var prop in data){
             //
             this[prop] = data[prop];
         }
     };    
-    
-   
      
     //Classify the input as either mutall, object, array or other
     this.classify = function(input){
@@ -146,7 +142,6 @@ function mutall(input=null){
         //
         //Consider only class names whose active forms are used in js. Those
         //that are thought not to be useful are not registered
-                   
         switch (classname) {
             //
             case "column":
@@ -178,8 +173,9 @@ function mutall(input=null){
             //and PHP. Can the other classes being activated justofy their
             //activation? Investigate as a means of cleaning the code
             case "driver_field":
-                var name = input.name;
-                a = new field(name);
+                //
+                //Formulate a js field, taking care of the input element
+                a = this.activate_driver_field(input);
                 break;
             //    
             case "layout_tabular":
@@ -212,6 +208,43 @@ function mutall(input=null){
         //
         //Return the active class
         return a;
+    };
+    
+    //Use the given static data to activate a driver field. This is particularly 
+    //important because the parent field parent is needed to construct the 
+    //input elements
+    this.activate_driver_field = function(sdata){
+        //
+        //Get the field name from the sttaic data
+        var name = sdata.name;
+        //
+        //Create the required field; dont confuse field the class with field the
+        //variable.
+        var fld = new field(name);
+        //
+        //Offload -- without activation, all the static properties to the field
+        fld.offload(sdata);
+        //
+        //Retrieve the field's element
+        var element = fld['element'];
+        //
+        //It must have a classname; get it
+        var classname = element['classname'];
+        //
+        //Use the classname to activate the element property
+        switch(classname){
+            case "input_checkbox": fld.element = new input_checkbox(fld); break;
+            case "input_textarea": fld.element = new input_textarea(fld); break;
+            case "input": fld.element = new input_element(fld); break;
+            //
+            //The default input element
+            default:
+                alert("Class name "+classname+" cannot be converted to a js object");
+                fld.element = input(fld); 
+        };
+        //
+        //Return the constructed field
+        return fld;
     };
     
     //Returns the standard query string compiled from the the given query 
@@ -275,7 +308,6 @@ function mutall(input=null){
         //Return the id (of the index)
         return obj[index];
     };
-    
     
        
    //The open window method extends the jasvscript window.open() method with
@@ -330,8 +362,9 @@ function mutall(input=null){
         var href = filename + "?"+ qstring;
         //
         //Now use the window open method to finish the job. Use the _blank 
-        //window name to force a new window, so that win and window are 
-        //different
+        //window name to force a new window, so that window.close() can work
+        //(as applications can only close windows that they open -- according
+        //to technical documentation) 
         var win = window.open(href, "_blank", specs);
         //
         //Set a timer so that we can check periodically when the new window 
@@ -341,40 +374,29 @@ function mutall(input=null){
         //function below
         var this_ = this;
         //
-        //Wait for the window to be closed, checking after 100 milliseconds
-        var timer = setInterval(function(){
-            //
-            //If the opened window is closed, clear the timer first, then 
-            //check to see if the closing was "proper" or not
-            if (win.closed)
-            {
-                //
-                //Clear the timer
-                clearInterval(timer);
-                //
-                //Check if the window was propely closed, i.e., if it was closed
-                //via the mutall close window menu or via the general window close
-                //option. We assume that when "win" was properly closed, the 
-                //property "this_.mutall_id" of window "win" is set to some
-                //mutall object of class $classname that was used to drive the
-                //opened window
-                var classname = win[this_.mutall_id];
-                //
-                //Use the page with the onfinish call back function if it is 
-                //valid to do so.
-                if (onfinish!==null && typeof classname !=="undefined"){
-                    //
-                    //Execute the onfinish function. This function ensures 
-                    //that this page is updated, depending on who opened
-                    //the window 
-                    onfinish.call(this_, classname);
-                }
-            }
-        }, 100);
+        //Set the data to be returned as false
+        
         //
-        //Return the opened window -- just in case the caller wants to interogate 
-        //it for furtjer details.
-        return win;
+        //When the new window is closed return to the caller with any user 
+        //defined data 
+        win.onunload = function(){
+            //
+            //We assume that when "win" was properly closed, the 
+            //property "this_.mutall_id" of window "win" is set to some data.
+            //Retreve it
+            var result = win[this_.mutall_id];
+            //
+            //Use the page with the onfinish call back function if it is 
+            //valid to do so.
+            if (onfinish!==null){
+                //
+                //Execute the onfinish function using the returned data. 
+                //
+                //This function ensures that this_ page is updated, depending 
+                //on who opened the window 
+                onfinish.call(this_, result);
+            }
+        };
     };
     
     //
@@ -386,8 +408,22 @@ function mutall(input=null){
         this.dbname = page.dbname;
     };
   
-    //Show the error message on this mutall page
-    this.show_error_msg = function(msg){
+    //Show the error message on this mutall page and wait (or not wait) for  the 
+    //user to continue.
+    this.show_error_msg = function(msg, wait=false){
+     
+       //The case for the user having to see the error beforewe can continuet
+       if (wait) {
+           //
+           //Often this is an error that may be too large to be accommodated by the
+           //location of the error tag, so we show it as an alert. It may not 
+           //show error message html in a smart way. We shall consider opening 
+           //a new (floating) window to show the error. 
+           alert(msg);
+           return;
+       }  
+       //
+       //When we dont have to wait to see the error.....
       //
       //Get the error element on the page
       var error = document.getElementById("error");
@@ -532,24 +568,7 @@ function mutall(input=null){
         this.password = page.password;
         this.dbname = page.dbname;
     };
-  
-    //Show the error message on this mutall page
-    this.show_error_msg = function(msg){
-      //
-      //Get the error element on the page
-      var error = document.getElementById("error");
-      //
-      //It is an error if you dont have the error element defined on this page
-      //Show both the error and the need for an error element on this page
-      if (error===null){
-          //
-          alert(msg + "\nNo element found with id='error' on page " + this.classname); 
-      }
-      else{
-        error.innerHTML=msg + "<br/>(Click to clear this message)";    
-      }
-    };
-    //
+  //
     //This empty function is build to match the php empty function for javascript
     //we decided to develop one to solve empty cases in javascript
     this.empty = function(value){
@@ -582,7 +601,7 @@ function mutall(input=null){
     
  }
 
-//Modelling the general field
+//Modelling the general field; field name is a critical element
 function field(name){
     //
     this.fname = name;
@@ -593,16 +612,24 @@ function field(name){
     
     //Editing this ordinary field simply switches on the edit mode on the given
     //dom field and transfers focus to the field. We assume that the input and 
-    //output elements are already synchronized. 
+    //output elements are already synchronized.
+    //Search keyword: input::edit
     this.edit = function(df){//field
         //
-        //Transfers data from from the given element (df) to the fields's value
+        //This process depends on the (input) element of this field. Call it 
+        //with the df argument, i.e., this.element.edit(df). If the input element is a checkbox, its checked 
+        //sttaus will be changed depending on teh value of the df. If its an
+        //input, this default behaviour will apply.
+        //
+        //Transfers data from from the given element (df) to the fields's value.
+        //The steps may be different -- depending on whether the field is a 
+        //checkbox or not.
         this.value = df.value;
         //
         //Switch this field to edit mode
         this.switch_field_to_edit(true, df);
         //
-        //Transfer focus to the input element
+        //Transfer focus to the input element...assumimg an input tag
         var input = df.querySelector("input");
         input.focus();
     }; 
@@ -613,18 +640,24 @@ function field(name){
         return this.name;
     };
     
-    //
-    //Switch this relation column to (or cancel the) edit mode -- given 
-    //its (dom field) view
+    //Switch this field to (or cancel the) edit mode -- given 
+    //its (dom field) view. View is a compound tag comprising of input and output
+    //tags for the field. The outer tag may be 'td' or 'field' -- depending on
+    //the layout. This process is guided by the (input) element of this field.
+    //Redirect it as this.element.switch_field_to_edit(to_edit, view). The 
+    //current nehaviour is for the input element.
+    // 
+    //Search keyword: input::switch_field_to_edit mode
     this.switch_field_to_edit = function(to_edit, view){
         //
-        //Get the output element from the viewd. Remember that every view 
+        //Get the output tag from the view. Remember that every view 
         //element has an output tag; also that not all views have an input tag,  
         //e.g., the primary key field. 
         var output = view.querySelector("output");
         //
         //Get the input element; it may be null (e.g., for the case of primary 
-        //key described above)
+        //key described above). 
+        //(The more general expresson should be ...(this.element.tag_name)
         var input = view.querySelector("input");
         //
         //Now do the requested switch
@@ -639,6 +672,10 @@ function field(name){
                 //
                 //Show the input tag with the same value as the output
                 input.removeAttribute("hidden");
+                //
+                //Assuming the input or textarea tag.....
+                //(For checkbox tag, we need to look at the textContext and uncheck
+                //or check the tag accordingly) 
                 input.value = output.textContent;
                 break;
             //
@@ -651,23 +688,22 @@ function field(name){
                 //
                 //Hide the output tag
                 output.removeAttribute("hidden");
-                //
-                //Reset the input value to the output??????
-                //input.value = output.textContent;
             break
         }
     };
 
-    //
-    //Copy THE INPUT DATA (what about the id and _output child elements? data 
+    //Copy THE INPUT DATA (what about the id and _output child elements) data 
     //from the given dom field to the given values object (or vice versa -- 
     //depending on the direction of the specified movement). 
     //(Why is page needed? Its only valid for record copying where we use it to
     //identify the propery field tag, td ot field -- depending on page layout retrieve)
+    //input::copy from dom_field to input or vice versa
     this.copy = function(from_dom, page, dom_field,values){//field
-        //Identify the input child element of a normal field
         //
-        //The input element allows data editing; it has the more updated data 
+        //This process depends on the (input) element. So, redirect it to
+        //this.element.copy(from_dom dom_field, values)
+        //
+        //The input element allows data editing; it has the more updated value 
         //than the output element -- but not every field has it.
         var input = dom_field.querySelector("input");
         //
@@ -680,22 +716,27 @@ function field(name){
         //Depending on the direction of the copy, move the data.
         switch(from_dom){
             //
-            //Copy the data from dom field to the container. Ths is teh case
+            //Copy the data from dom field to the container. Ths is the case
             //of a normal field where the output=input tag elemens. Unlike the
-            //relation fiels, there is no id field
+            //relation field which is more complex
             case true:
+                //This is the case for an input element. For a checkbox the value
+                //depends on the checked status
+                //
                 //Valid only if the input is valid, as it has the latest value
                 if (input!==null){
                     values[fname] = input.value;
                 } else{
                     //
-                    //Valid in all cases
+                    //Valid in all cases. 
                     values[fname] = output.textContent;
                 }
                 break;
             //
             //Copy data from the container to the dom field
             case false:
+                //
+                //This assignment depends on the element.
                 //
                 //Valid only if input is valid; the parimary key has no input
                 if (input!==null){
@@ -707,6 +748,71 @@ function field(name){
                 break;
         }
     };
+    
+    //Returns the field type, e.g., input, checkbox or textarea -- all of which
+    //present the value in different ways. textarea and inpu are very close. It
+    //is not possible to tell teh field type during construction, hence this is 
+    //a method -- rather than a property
+    this.ftype = function(){
+        //
+        //Return the field type if it is defined
+        if (typeof this._ftype!=='undefined'){
+            return this._ftype;
+        }
+        //
+        //Determine and return if the field is a checkbox
+        //If the feld is named valid or the size is 1 byte then its likely to be 
+        if (this.name==='valid' || this.length===1){
+            return new checkbox(this);
+        } 
+        //
+        //Determine and return if the field is a text area. Its a text area if 
+        //it is named description or text size is more than 100 characters
+        if (this.name==='description' || this.length>100){
+            return new input(this, false);
+        }
+        //
+        //The default field type is (true) input
+        this._ftype = new input(this, true);
+        //
+        //Try to workout the field type
+        return this._ftype;
+    };
+}
+
+//Modelling the input element -- given the parent field.
+function input_element(field){
+    //
+    this.field = field;
+    //
+    //Inherit from mutall object
+    mutall.call(this);
+    
+    //Setting the input value from an input tag
+    this.set_value = function(tag){
+        //
+        this.field.value = tag.value;
+    };
+}
+
+//Modelling a checkbox input
+function input_checkbox(field){
+    //
+    //Inherit the input element
+    input_element.call(this, field);
+    
+    //Setting the checkbox sttus value from a checkbox tag
+    this.set_value = function(checkbox){
+        //
+        this.field.value = checkbox.is_checked ? 1: 0;
+    };
+}
+
+//Modelling a textarea input
+function input_textarea(field){
+    //
+    //Inherit the input element
+    input_element.call(this, field);
 }
 
 
@@ -722,7 +828,7 @@ function column(name){
     field.call(this, name);
     
     //Transfer it from the value from the (html) input element to the
-    //this (js) column and sybchronize all associated fields
+    //this (js) column and synchronize all associated fields
     this.change_field = function(input, page, selector_type, has_sibbling=false, has_other=false) {//colum
         //
         this.page=page;
@@ -828,10 +934,15 @@ function column_foreign(name){
     //Inherit the field properties of column relation
     column_relation.call(this, name);
   
-    //Edit this foreign key field, given its dom field view and page. The view is
-    //an element, td or field, depending on the page layout, that represents
-    //the visible part of this foreign key record. The page also supplies the
-    //needed dbname to select records from.
+    //Edit this foreign key field, given its dom field view and the parent page. 
+    //The view is an element, td or field, depending on the page layout, that 
+    //represents the visible part of a foreign key field. The parent page 
+    //supplies data, e.g., the table and datbase names to select records from. 
+    //The method calls a page selectr which returns the new data (and metadata)
+    //for the foreign key field.
+    //
+    //Customising teh page selector size seeme to interfere with the 
+    //on-window-clos event. This needed some investigatio
     this.edit = function(dom_field_view, page){//comlumn_foreign
         //
         //Let (old) values be an empty object for receiving the data to be 
@@ -847,23 +958,39 @@ function column_foreign(name){
         //foreign key table associated with this field
         var tname = dom_field_view.querySelector("fk_table_name").textContent;
         //
-        //Define the dimension specifications of the login window and place it 
-        //relative to the dom field
-        var top = 0;
-        var left = dom_field_view.offsetLeft;
-        var specs = "top="+top+",left="+left+",height=400,width=400";
+        //Define the dimension specifications of the page_selector window and 
+        //place it relative to the dom field
+        //
+        ////
+        //The specs are making the window not receive the window closing event,
+        //so they have been removed
+        //
+        //Place the page selector at the top of the page...
+        //var top = 0;
+        //
+        //...and  in the same column position as the dom field
+        //var left = dom_field_view.offsetLeft;
+        //
+        //Compile the page window location specifications
+        //var specs = "top="+top+",left="+left+",height=400,width=400";
         //
         //Prepare the query string (requirements) of the selector page
         var qstring = {
             //
-            //Parameters for defining a page of records
+            //Minimum requirements for defining a page of records
             tname:tname,
             dbname:page.dbname,
             //
             //Set the values from the subfields of this foreign key. This is
             //the data that extends a page_records to a page_selector
+            //
+            //The (friendly) value visible for a foreign key field
             output:this.get_value("output"),
+            //
+            //Te unique identifier (no nesarly friendly) name of the field value
             id:this.get_value("id"),
+            //
+            //The foreign key value of the field
             primarykey:this.get_value("primary")
         };
         
@@ -872,10 +999,9 @@ function column_foreign(name){
         //and wait for user to interact with it; on return (when the window is closed)
         //extract the returned values to refresh the dom field version (on this 
         //page) being modified. The values is an object comprising of properties 
-        //and values that match the primary, id and output subfields of the 
-        //foreign key field. We use field.copy() to effect the transfers. The
-        //in_field parammeter is the primary key field (the parent of this 
-        //foreing key with values attached to it)
+        //and values that match the subfields, i.e., primary, id and output 
+        //of the foreign key field. We use field::copy() to effect the 
+        //transfers. 
         this.open_window("../library/page_selector.php", qstring, function(in_values){//edit_fkfield
             //
             //Retrieve the values from the incoming field. Remember that 
@@ -889,7 +1015,7 @@ function column_foreign(name){
             
             //Define the in_field that maps primary key field names to their
             //subfield indices". The structure is defined in PHP field::map .
-            //(in futue, access this structiure as a property of field, so that
+            //(in future, access this structiure as a property of field, so that
             //field_map = this.map
             var field_map = {
                 id:"_id",
@@ -907,8 +1033,8 @@ function column_foreign(name){
                 //the same subfield index as the source
                 var destfname = this.subfields[i].fname;
                 //
-                //Copy teh date from teh sourec to the destination, indexed
-                //by teh destination
+                //Copy the data from the sourec to the destination, indexed
+                //by the destination
                 re_values[destfname] = in_values[srcfname];
             }
             //
@@ -919,10 +1045,13 @@ function column_foreign(name){
             //
             //Switch the dom field_view into edit mode
             this.switch_field_to_edit(true, dom_field_view);
-        }, specs);
+        //The specs are making the window not receive the window closing event,
+        //so it has been removed    
+        //}, specs);
+        });
     };
  
-    //Edit the water meter foreign key column
+    //Edit the water meter foreign key column (differently from editig a foreign key)
     this.change_field = function(input,page, selector_type, has_sibbling=false, has_other=false) {//column_foreign
         //
         this.selector_type=selector_type;
@@ -960,7 +1089,7 @@ function column_foreign(name){
         ///Request the server to open a new selector page, with the given input
         //and wait for user to interact with it; on return (when the window is closed)
         //extract the subfield values. Note how the url is formulated to ensure
-        //that we can can this page from projects other than Buis; the relative
+        //that we can call this page from projects other than Buis; the relative
         //location of the project is important
         this.open_window("../library/page_selector.php", qstring, function (subfield) {
             //
@@ -1003,7 +1132,7 @@ function column_relation(name){
             //Now the child is either primary, id or output
             var child = dom_field_view.querySelector(index);
             //
-            //Now copy the data from values structure to the dom field texy 
+            //Now copy the data from values structure to the dom field text 
             //content (or vice versa depending desired direction)
             switch(from_dom){
                 //
@@ -1043,7 +1172,9 @@ function column_relation(name){
 }
 
 
-//The mutall page models an ordinary web page. 
+//The page models an ordinary web page, given the input derived from a mutall 
+//object. The special thing about a mutall object is teh classname tag that helps
+//us to convert a php class to a js class throughthe acivation process
 function page(input_){
     //
     //Initialize the parent mutall system. This is done here so that 
@@ -1077,7 +1208,7 @@ function page(input_){
         std_str = this.compile_std_querystring(this.querystring);
         //
         //Add this pages filename to complete the query string
-        complete_str = this.filename + "? ", std_str;
+        var complete_str = this.filename + "? ", std_str;
         //
         //Make the query string to send to the server
         var qstring = {
@@ -1103,7 +1234,14 @@ function page(input_){
                 this.show_error_msg(result);
             };
         });
-    };    
+    };  
+    
+    //Close this window properly; that means, saving the given data to the current
+    //windows object before closing the window
+    this.close_window = function(data){
+        window[this.mutall_id] = data;
+        window.close();
+    };
      
     //The ajax method sends requests to the server to execute a specific method
     //on desired objects of some class.
@@ -1305,166 +1443,68 @@ function page(input_){
         window.localStorage.id=JSON.stringify(obj);
     };
     
-  //load elements from the server using the onload method  
-  this.onload = function () {
-      
-    
-    //Retrieve all the load elements
-    var loads = window.document.querySelectorAll("load");
-    
-    //Define variables to use
-    var load=null;
-    var id=null;
-    var method=null;
-    //
-    //
-    //Step thru each one of them and load it
-    for(var i=0; i<loads.length; i++){
-        //
-        load=loads[i];
-        method=load.getAttribute("method");
-        //
-        //Load the method and place the resulting data in the id 
-         //
-         //Use the ajax to transform the elements from php into html
-         //the var query string passes the extra information we want
-         //to pass to the server. In this case, we are letting the server
-         //know that for every loaded element, it should assign the id and 
-         //load before the for loop is continued.
-        var querystring = {
-            i:i
-        };
-        //this is where we declare the expected output for the ajax method
-        var expected_output = "json";
-        
-        //if the expected output is a json, the result expected contains
-        //three elements including the status, the html to be displayed and
-        //any additional information we want from the server
-        var exec = function (result) {
-            
-            //result.status, .html, .extra
-            if (result.status==="ok"){
-                //
-                //Get the i'th load tag
-                load = loads[result.extra];
-                //
-                //Retrieve the id and method attributes
-                id = load.getAttribute("id");    
-                
-                //this is the ajax execute method. this is where the declared 
-                //functions are executed by ajax and displayed depending on the
-                //expected output.
-                var element = window.document.getElementById(id);
-                element.innerHTML = result.html;
-            }
-        };
+    //load elements from the server using the onload method  
+    this.onload = function () {
 
-        this.ajax(method, querystring, expected_output, exec);
-    }
-};
+
+      //Retrieve all the load elements
+      var loads = window.document.querySelectorAll("load");
+
+      //Define variables to use
+      var load=null;
+      var id=null;
+      var method=null;
+      //
+      //
+      //Step thru each one of them and load it
+      for(var i=0; i<loads.length; i++){
+          //
+          load=loads[i];
+          method=load.getAttribute("method");
+          //
+          //Load the method and place the resulting data in the id 
+           //
+           //Use the ajax to transform the elements from php into html
+           //the var query string passes the extra information we want
+           //to pass to the server. In this case, we are letting the server
+           //know that for every loaded element, it should assign the id and 
+           //load before the for loop is continued.
+          var querystring = {
+              i:i
+          };
+          //this is where we declare the expected output for the ajax method
+          var expected_output = "json";
+
+          //if the expected output is a json, the result expected contains
+          //three elements including the status, the html to be displayed and
+          //any additional information we want from the server
+          var exec = function (result) {
+
+              //result.status, .html, .extra
+              if (result.status==="ok"){
+                  //
+                  //Get the i'th load tag
+                  load = loads[result.extra];
+                  //
+                  //Retrieve the id and method attributes
+                  id = load.getAttribute("id");    
+
+                  //this is the ajax execute method. this is where the declared 
+                  //functions are executed by ajax and displayed depending on the
+                  //expected output.
+                  var element = window.document.getElementById(id);
+                  element.innerHTML = result.html;
+              }
+          };
+
+          this.ajax(method, querystring, expected_output, exec);
+      }
+    };
     
      
 
     
     
-    //The open window method extends the javascript window.open() method with
-    //an ability to return the data needed to update the caller page. The windows 
-    //open method has the signature:-
-    //
-    //win open(url, ...)
-    //
-    //where the returned win is the newly opened window and the url is a  
-    //string made of the filename to serve plus the its requirent as a querystring.
-    //In contrast, the mutall version has the following signature:-
-    //
-    //win open_window($filename, jsquerystring, onfinish, ...)
-    //
-    //You note that rather than pass the a url, we pass only the filename,
-    //complete with its protoco and host componetsto the server. The main 
-    //differences are that (a) the querystring is passed as a js object and (b)
-    //more importantly, extra parameter, onfinish. It is a call back function
-    //which is executed when win is exited properly; that means saving new data
-    //to property $mutall.id in the returned window (win) befoer exiting it. 
-    //The function has the following signature:-
-    //
-    //onfinish(data)
-    //
-    //where data is the object comprising of data constructed by teh function that
-    //closes this window.
-    //
-    //A new page can be initiated from any mutall object. This mechanism allows 
-    //us to move from one page to another; becuse it relies on the javascript's 
-    //window.open method, it can pass to the server ony a limited amount of 
-    //data, so the earlier practice of sending a whole page was stopped. That 
-    //was the down side, because it meant that we have to be careful 
-    //to pass only the critical amount of data to the sever -- the requirement. 
-    //The positive aspect is that the method allows the called page to evoke 
-    //the onload method which we relied on to build a complex page.
-    //
-    //This method of talking to the server assumes that the user needs to 
-    //interact with the page. This is in contrast to the ajax method which
-    //talks to the server without any user intervention and has no data 
-    //limitation because we talk to the server via the post command - rather
-    //than get.
-    //
-    //This version uses a query string to pass data to the server
-    this.open_window = function(filename, jsquerystring, onfinish=null, specs=""){
-        //
-        //The system window.open command uses the get method.
-        //Convert the input data to a json string; how do you tell if the 
-        //conversion was successful?
-        var qstring = this.compile_std_querystring(jsquerystring);
-        //
-        //Compile the required url; mutall_id is the name of index in the 
-        //PHP global $_GET variable that is used for accessing this data
-        var href = filename + "?"+ qstring;
-        //
-        //Now use the window open method to finish the job. Use the _blank 
-        //window name to force a new window, so that win and window are 
-        //different
-        var win = window.open(href, "_blank", specs);
-        //
-        //Set a timer so that we can check periodically when the new window 
-        //is closed by the user
-        //
-        //Freeze "this" object in order to reference it within the anonymous 
-        //function below
-        var this_ = this;
-        //
-        //Wait for the window to be closed, checking after 100 milliseconds
-        var timer = setInterval(function(){
-            //
-            //If the opened window is closed, clear the timer first, then 
-            //check to see if the closing was "proper" or not
-            if (win.closed)
-            {
-                //
-                //Clear the timer
-                clearInterval(timer);
-                //
-                //Check if the window was propely closed, i.e., if it was closed
-                //via the mutall close window menu or via the general window close
-                //option. We assume that when "win" was properly closed, the 
-                //property "this_.mutall_id" of window "win" is set to some
-                //data. The call back function heeds to be able to interpret
-                //the data -- depending on  the expectation
-                var data = win[this_.mutall_id];
-                //
-                //Use the data with the call back only if both are valid
-                if (onfinish!==null && typeof data !=="undefined"){
-                    //
-                    //Execute the onfinish function. This function ensures 
-                    //that this page is updated, depending on who opened
-                    //the window 
-                    onfinish.call(this_, data);
-                }
-            }
-        }, 100);
-        //
-        //Return the opened window -- just in case the caller wants to interrogate 
-        //it for furtjer details.
-        return win;
-    };
     
     //Show the last record that was selected
     this.show_selection=function(){
@@ -1595,7 +1635,7 @@ function page(input_){
             //Show this message as a wizzard to guide the user. Waiting for... 
             "select a table to view its records",
             //
-            //This is is called when we need to test if a table name has been 
+            //This is called when we need to test if a table name has been 
             //selected
             "tname_is_selected",
             //
@@ -1605,7 +1645,7 @@ function page(input_){
             //records; so the "next" action after that is left out
             function(){
                 //
-                //The best server file to deliver the needed servive is the page_records.
+                //The best server file to deliver the needed service is the page_records.
                 //Compile its data (seed) requirements
                 var qstring = {
                     //
@@ -1701,10 +1741,10 @@ function page(input_){
         dr.setAttribute("current", "record");
     };
     
-    //On changing an simple (text) input, update this page's querystring directly
+    //On changing a simple (text) input, update this page's querystring directly
     this.onchange = function(input){
         //
-        //Get teh type of input
+        //Get the type of input
         var type = input.getAttribute('type');
          //
         //Get the id of the desired property from the input element
@@ -1713,7 +1753,7 @@ function page(input_){
         //Get this page's  querystring (array)
         var qstring = this.arr;
         //
-        //The qstring pro[erty setting depends on the type input element
+        //The qstring property setting depends on the type input element
         switch(type) {
             //
             //A user interacts with a checkbox through the checked property
@@ -1740,26 +1780,6 @@ function page(input_){
                 qstring[id]=value;
         }
   };
-    
-   //
-   //Close this page properly. This means saving requested data to the window
-   //and closing it. If no data is provided, this page object is returned to
-   //teh caller; otherwise the requested data is returned
-   this.close_window = function(data=null){
-       //
-       //Save this page's index, if valid, to the local wndow storage
-       //this.save_index();
-       //
-       if (data === null){
-         //Save this page to the current windows object
-         window[this.mutall_id]=this;
-       }
-       else{
-         window[this.mutall_id]=data;  
-       }
-       //
-       window.close();
-   };
    
     //The anhor method sends requests to the server to perform using a complete
     //url. It has the following arguments:-
@@ -1843,8 +1863,9 @@ function page(input_){
         //next() task is not yet met. Start the wait
         else{
             //
-            //Update the error message element to show what we are waiting for
-            this.show_error_msg("Waiting for you to " + msg + "....");
+            //Update the error message element to show what we are waiting for.
+            //(false = Do not wait for the user to see this message) 
+            this.show_error_msg("Waiting for you to " + msg + "....", false);
             //
             //Freeze "this", to avoid confusion of window.this and page.this This 
             //issu is also present in annymous functions in php.
@@ -2610,7 +2631,6 @@ function page_selector(page_selector_) {
         qstring.primarykey = this.primary;
         qstring.output = this.output;
     };
-    
         
     //Use the given hint to search the primary key field (in the output subfield)
     //for the hinted records of this page's driver table. 
@@ -2673,9 +2693,30 @@ function page_selector(page_selector_) {
         //Copy the values from the (true) dom_field to the values collector
         pkfield.copy(true, this, dom_record.view, values);
         //
-        //Close the window, returning the field with the attached values
-        this.close_window(values);
+        //Save the values to the current window object under a name that caller
+        //is aware of. Be careful not to overwrite a valid
+        //windows property, so, the name referenced by 'this.mutall_id' 
+        //must be carefully chosen
+         window[this.mutall_id]=values;
+        //
+        //Now close the window to raise the onunload event on the caller. 
+        //Closing will not be allowed if this process did not create this window
+        //i.e., it may have reused a previously existing one. Hence the need for 
+        //the _blank target in the open window open statement.
+        window.close();
     };
+    
+    //After (successfully) creating a new record return the foreign key
+    //subfield data to teh caller 
+    this.add_data = function(values){
+        //
+        //Save it before closing this window
+        window[this.mutall_id] = values;
+        //
+        //Now close the selector window
+        window.close();     
+    };
+    
 }
 
 //The records page is used for representing (and interacting with) multiple
@@ -2704,8 +2745,8 @@ function page_records(input_){
     this.dbname=input_.dbname;
     this.tname = input_.tname;
     //
-    //Initialize the parent page table
-    page_table.call(this, input_);
+    //Initialize the parent page
+    page.call(this, input_);
   
     //Returns a query string object that is fit for supporting CRUD operations 
     //on this page. If dom_record is missing, then the values property
@@ -2784,15 +2825,16 @@ function page_records(input_){
     };
     
     //Returns the current dom record of this page based on the "current" 
-    //attribute. If there is no current this function fails quietly. 
+    //attribute. If there is no current this function fails quietly and 
+    //returns a boolean false. 
     this.try_current_dom_record = function (){
         //
-        //Formulate the current record css selector. Note that the curent 
-        //selector is designed to be independent of the records layout
+        //Formulate the current record css selector. Note that the curfent 
+        //selector is designed to be independent of the records layout.
         var rselector = "[current='record']";
         //
-        //Retrieve the current dom record element by searching in the entire 
-        //document to represent the viewable part of a record
+        //Retrieve the current dom record element (by searching in the entire 
+        //document) to represent the viewable part of a record
         var view = window.document.querySelector(rselector);
         //
         //Test if the search returned a valid element
@@ -2805,35 +2847,161 @@ function page_records(input_){
         //Create a dom record that links the visible part of of a record, view, 
         //and the PHP representation of the same based on this page.
         //
-        //Note the adopted PHP variable naming style to avoid confucion between
-        //the window-level variables, $dom_record the variable and dom_record the
-        //class function
+        //Note the adopted PHP variable naming style to avoid confusion between
+        //the window-level variables, $dom_record (the variable) and dom_record 
+        //(the class function)
         var $dom_record = new dom_record(view, this);
         //
         //Return the dom record
         return $dom_record;
     };
    
-        
+   //Collect the current record data and write it to the database associated
+    //with this page
+    this.save_current_record = function(){//page_records
+        //
+        //Get the current dom record from this page; it has the values we need. 
+        //An alert will be raised if none is found.
+        var dom_record = this.get_current_dom_record();
+        //
+        //Save the record, but first disallow empty identification fields
+        //
+        //Handle the identification data, i.e., collect it, check for missing
+        //values (reporting if any). Abort this process if any of the 
+        //identification fields is empty. The index validation process will 
+        //have highlighted the ones that are empty and an appropriate error 
+        //message displayed on this page's error node.
+        //
+        //Mark in red, all the empty identification fields and return them 
+        //as a comma separated string list.
+        var fields = dom_record.get_blank_idfields();
+        //
+        //Abort this process if at least one empty identification field is found
+        if (fields!==""){
+            //
+            //Compile an appropriate error message.
+            var msg = "The following identification fields are blank: "+fields;
+            //
+            //Display the message on the error node
+            alert(msg);
+            //
+            //There is no need to continue; let the user fix the errors
+            return false;
+        }
+        //
+        //Get the querystring with all the necessary data for saving a record
+        var qstring = this.get_querystring(dom_record);
+        //
+        //Save the current record and return, as extra data, the json string
+        //of the saved values, as a name/value pairs object 
+        this.ajax("save_current_record", qstring, "json", function(result){
+            switch (result.status) {
+                case "ok":
+                    //
+                    //The result's extra data is an object of name/value pairs
+                    //as (rich) values returned from the database
+                    var new_values = result.extra;
+                    //
+                    //Use the returned values to update the page. If this process
+                    //was evoked from page_records, then the records list is updated
+                    //If called from page_record, then we save data in the 
+                    //windows[mutall_id] and close the page
+                    this.update_page(dom_record, new_values);
+            break;
+                case "error":
+                    //
+                    //Show the error from html property
+                    alert(result.html);
+                    break
+                default:
+                    alert("Unknown ajax result status '" + result.status + "'");
+            }
+            
+        });
+    };
+    
+    //
+    //Update this page. For page_records this updates the current page
+    //with the new values returned from a database. For page_record, we save 
+    //teh values and close this page
+    this.update_page = function(dom_record, values){//page_records
+        //
+        //Set the new values to the dom record -- this is a form of a very 
+        //controlled refresh
+        dom_record.update_view(values);
+        //
+        //Switch to display mode (i.e, not edit mode)
+        dom_record.switch_record_to_edit(false);
+    }                
+    
+    //Create a aingle new record from this table
+    this.create_record = function(){
+        //
+        //Unlike the page_database::create_record version, this one does not
+        //wait for a table to be selected. It an error if it is not available
+        //
+        //Collect the parameters needed by page_record
+        var qstring = {
+            //
+            //The table name associated with this class
+            tname: this.tname,
+            //
+            //The underlying database 
+            dbname: this.dbname,
+            //
+            //Use the label layout for display of the records
+            layout_type:'label'
+        };
+        //
+        //Request the server to show the the page of a single record. The php 
+        //file is found in the library. On return, page_record returns a copy
+        //of the data in the call back funcion argument. The expected data
+        //is {dom_record, values) where:-
+        //- dom_record has the a) (record) view which was used to capture 
+        //  the new values; b) the js record structure. 
+        //- values are the new data values read from teh database after saving
+        //If the called window was closed properly, it will hold this object
+        //structure
+        this.open_window("../library/page_record.php", qstring, function(data){
+            //
+            //The page_record window was closed. 
+            //
+            //Cchek if the window was closed properly
+            if (typeof data!=='undefined'){
+                //
+                //Add the new data. That depends on who called this function.
+                //Bt default is simply a refresh the currnt winow. For a page
+                //selector, we return (throw window[mutall_id]) the newly 
+                //added data.
+                this.add_data(data);
+            }
+        });   
+    };
+    
+    //
+    //Add the new data. That depends on who called this function.
+    //Bt default is simply a refresh the currnt winow. For a page
+    //selector, we return (throw window[mutall_id]) the newly 
+    //added data.
+    this.add_data = function(data){
+        //
+        //Refresh the curent selector lisr
+        window.location.reload();
+            
+    };
+    
     //Add a new record to this page. The strategy is to instruct the server to 
-    //construct a record then append it to the 
-    //beginning of the current table, just after the header, i.e., as the first
-    //child of node tbody. This is designed to work for both types of record 
-    //layout, viz., tabular and label. If the pre-filling of a table depends on
-    //the page class from which this function was called. The default behaviour
-    //is none
+    //construct a record then append it to the beginning of the current table, 
+    //just after the header, i.e., as the first child of node tbody. This is 
+    //designed to work for both types of record layout, viz., tabular and label. 
     this.add_record=function (){
         //
-        //Get teh query string fit for supporting CRUD opertaions on records 
-        //based on this page. The dom_record component is missng for ned records
+        //Get the query string fit for supporting CRUD operations on records 
+        //based on this page. The dom_record component is missng for new records
         var qstring = this.get_querystring();
         //
         //The expected output from adding a record is the html to be appended 
-        //to this page's records just after the table's  heading. Note that we
-        //have overriden the default class to be passed to the server with the
-        //appropriate one, this.class, ratjer than hanrd wire "page_records". 
-        //That ensures that the correct class will be requested to execute this
-        //function by teh server in PHP.
+        //to this page's records just after the table's  heading. 
         this.ajax("add_record", qstring, "html", function(result){
             //
             //Get the tbody element as we will need to access her children. 
@@ -3043,7 +3211,7 @@ function page_records(input_){
         //We do need to verticall scroll
         //
         //Take the last queystring array
-        qstring = this.arr;
+        var qstring = this.arr;
         //
         //The page sise should be the scrolling limit
         qstring.limit = this.scroll_limit; 
@@ -3127,62 +3295,492 @@ function page_records(input_){
     };
 }
 
-function page_table(input_){
-    //
-    //Initialize teh parent page table
+//Representation of a login page class in JS. The justification of this page as 
+//a standaone file is the fact that it is referenced in more than one place, e.g.,
+//in page_login as well as in page_buis
+function page_login(input_) {
+    //        
+    //Login data is laid out in a label format. Initialize the page system.
     page.call(this, input_);
+    
+    //Save the login data by copying it from the dom record to the js 
+    //record (structure) and saving it in the windows object ready for the 
+    //caller to pick it up from there
+    this.ok = function(){
+        //
+        //Get the record tagname of this page's layout
+        var rec_tagname= this.layout.record_tag_name;
+        //
+        //Get the dom record view using the correct tag name. (For tabular layout
+        //the tag name is "tr"; for labels, it is "field")
+        var dom_record_view = window.document.querySelector(rec_tagname);
+        //
+        //Create a dom record from this view and page; this process also 
+        //transfers the values from the view to the record's values
+        var $dom_record = new dom_record(dom_record_view, this);
+        //
+        //Compile the querystring from the dom_record values; it comprises of 
+        //the user name and password
+        var qstring = {
+            username: $dom_record.values.username,
+            password: $dom_record.values.password
+        };
+        //
+        //Request the server to check the login credentials against registered
+        //clients. If registered, return the clientid; if not, report user not 
+        //found
+        this.ajax("check_login", qstring, "json", function(result){
+            //
+            //Pass on the populated record to the caller js function if login 
+            //credentials were succesfully saved to the server
+            if (result.status==="ok"){
+                //
+                //The login proceeded without any errors. Now investigate the 
+                //result by looking at the extra data
+                var user = result.extra;
+                //
+                if (user.found){
+                    //
+                    //Compile the data to return to the window
+                    //
+                    var data = {
+                        username:qstring.username,
+                        clientid:user.clientid
+                    };
+                    //Close this window properly; this means saving the compiled
+                    //querystring data to the windows object first, then closing it. 
+                    //That way, caller will have access to the data in the query 
+                    //string. When the window is improperly closed, the querystring
+                    //data is not saved, so that the caller cannot access it.
+                    this.close_window(data);
+                }
+                //
+                else{
+                    this.show_error_msg("User is not found");
+                }
+            }
+            //...otherwise show the error message. The page remains open
+            else{
+                this.show_error_msg(result);
+            }
+        });
+      };
+      
+    //Logout simply destroys the session variables
+    this.logout = function(){
+        //
+        //Request for logout function; no data needs to besent to the server to 
+        //logout
+        this.ajax("logout", {}, "json", function(result){
+            //
+              if (result.extra==="ok"){
+                //
+                //Close the window. This is the event that signals to the caller 
+                //that we are done with login
+                window.close();
+            }
+            //...otherwise show the error message
+            else{
+                this.show_error_msg(result);
+            }
+        });
+    };
+    
+    //The login page needs no initialization
+    this.onload = function(){};
+    
+    //Log into or out of the mutall database system and show the status on the 
+    //appropriate buttons of this page. This allows access to all databases by
+    //mutall_data staff
+    this.log = function(is_login){
+        //
+        //Get the log in/out buttons
+        var buttons = this.get_log_buttons();
+        //
+        //Do either login or logout
+        if (is_login){
+            this.login(buttons);
+        }
+        //
+        else{
+            this.logout(buttons);
+        }
+
+    };
+    
+    //Log into the mutall system to to prevent access to mutall databases
+    //to unauthorised uers
+    this.login = function(buttons){
+        //
+        //Define the dimension specs of the login window in pixels
+        var specs = "top=100, left=100, height=400, width=600";
+        //
+        //Open the login page with no requirements. If the login was /successful,
+        //we expect the data to be written to a session variable and an object 
+        //with the login credentials is returned to allow us update the login 
+        //status
+        this.open_window("../library/page_login.php", {}, function(login){
+            //
+            //
+            //Show the login status
+            this.set_log_buttons(true, buttons, login.username);
+            //
+            //Update this page's username and registration id, i.e, the primary
+            //key value of the mutall_data clients's entry        .
+            this.username = login.username;
+            //
+            //The userid is used for supporting transactions, e.g., the case of
+            //showing interest on real estate
+            this.clientid = login.clientid;
+            
+        },specs);
+    };
+   
+   //Get the log in/out buttons on the current page
+    this.get_log_buttons = function(){
+        //
+        //Get the login button; 
+        var login = window.document.getElementById("login");
+        //
+        //It must be found!.
+        if (login===null){
+            alert("Log in button not found on page "+ this.name);
+        }
+        //
+        //Get the logout button
+        var logout = window.document.getElementById("logout");
+        //
+        //It must be found!.
+        if (logout===null){
+            alert("Log out button not found on page "+ this.name);
+        }
+        //
+        //Define and set the buttons structure
+        var buttons = {
+            login: login,
+            logout:logout
+        };
+        //
+        //Return the buttons
+        return buttons;
+    };
+    
+    //Register a new user
+    this.register = function(){
+        //
+        //Open the client registration window
+        //
+        //The file to open is in teh services folder, shich is a simbling
+        //of the current one:-
+        var filename = "../services/registration.php";
+        //
+        //The server needs the following info:-
+        querystring = {
+            //
+            //The database to regfer to
+            dbname:"mutallco_data",
+            //
+            //The table to open
+            tname:"client",
+            //
+            //A criteria that retuens no data when teh page is viewed
+            criteria:false
+        };
+        //
+        //Now open the requested window and use the user data to log in
+        //the the new user
+        this.open_window(filename, querystring, function(user){
+            //
+            //Sow the username of teh logged in user
+            alert(user.username);
+        });
+        
+    };
+    
+    //Set the log in/out buttons, depending on the login status
+    this.set_log_buttons = function(is_login, buttons, username){
+      //
+      ///Show the log in status
+      if (is_login){
+        //
+        //Hide the login button
+        buttons.login.setAttribute("hidden", true);
+        //
+        //Show the logout button with username
+        buttons.logout.removeAttribute("hidden");
+        //
+        //Attach the user name to the logout butom
+        buttons.logout.value = "Logout " + username;  
+      }
+      //
+      //Show the log out status
+      else{
+         //Show the login button
+        buttons.login.removeAttribute("hidden");
+        //
+        //Hide the logout button
+        buttons.logout.setAttribute("hidden", true); 
+      }
+    };
+    
+    
+    //Log out of a mutall system; this :-h
+    //-destroys the session variables 
+    //-resets the username and clientid properties of this page
+    //-updates the login status
+    this.logout = function(buttons){
+        //
+        //Request for logout function from the server; the querystring is empty
+        this.ajax("logout", {}, "json", function(result){
+            //
+            //Save the record if login credentials are ok...
+            if (result.status==="ok"){
+                //
+                //Clear the username and clietid properties
+                this.username=null;
+                this.clientid=null;
+                //
+                //Set the status
+                this.set_log_buttons(false, buttons);
+            }
+            //
+            //...otherwise show the error message
+            else{
+                this.show_error_msg(result);
+            }
+        });
+    };
+    
+    
+}
+
+//The javascript "class" that models the functionality of a
+//page of a single record. The input_ is non-object data passed
+//on from the php environment and used to compile the page
+function page_record(input_) {
     //
-    this.save_current_record = function(){//page_table
+    //Set the db and table names from the input
+    this.dbname=input_.dbname;
+    this.tname = input_.tname;
+    //
+    //Call the parent page_records class
+    page_records.call(this, input_);
+    
+    //After we successfully save a values, we immediatedly save the values
+    //and close the page -- when we are in a page_record situation. In
+    //the case of page_records, its a different matter; the dom record is 
+    //needed so we can rebuild it.
+    this.update_page = function(dom_record, values){//record
         //
-        //Get the current dom record from this page; it has the values we need. 
-        //An alert will be raised if none is found.
-        var dom_record = this.get_current_dom_record();
+        //Save the values only. (Forget about the dom record(
+        window[this.mutall_id]=values;
         //
-        //Save the record, but first disallow empty identification fields
+        //Leave this window
+        window.close();
+    };
+    
+    
+    //Change a field on this page; the name id in reference input element
+    this.page_change_field = function(ref){//page
         //
-        //Handle the identification data, i.e., collect it, check for missing
-        //values (reporting if any). Abort this process if any of the 
-        //identification fields is empty. The index valiadation process will 
-        //have highlighted the ones that are empty and an appropriate error 
-        //message dislayed on this page's error node.
+        var fname = ref.name;
         //
-        //Get the empty identification fields
-        var fields = dom_record.get_blank_idfields();
+        var field = this.driver.fields[fname];
         //
-        //Abort this process if at least one empty identification field is found
-        if (fields!==""){
+        field.change_field(ref, this);
+    };
+    
+   
+    //What do do after a successful saving of a record. By default, we do
+    //nothing
+    this.after_save = function(values){
+        //
+    }
+    //
+    //Collect all the values to save
+    this.collect_values = function(){
+      
+        var values={};
+        //
+        //Let 'fields' be all the fields of the current driver
+        var fields = this.driver.fields;
+        //
+        //Loop through the fields structure
+        for(var i in fields){
             //
-            //Compile the list of empty fields message
-            var msg = "The following identification fields are blank: "+fields;
+            //This assignmment should be conditional on field value not being 
+            //empty. Be careful what you mean by being empty because zero
+            //lenth string is not a null
+            if (fields[i].value!==null || fields[i].value!==''){
+                values[i]=fields[i].value;
+            }
+        }
+        //
+        return values;
+    };
+    
+    //The default quclity control (qc) check does nothing
+    this.qc = function(values){
+        return true;
+    };
+    
+    //
+    //Let x be the querystring of the parent; I will ovrride it in the the
+    //implementation of this version's querystring
+    this.old_get_querystring = this.get_querystring;
+    
+    //Returns a query string for supporting CRUD operations on this 
+    //page. This extends the page records version by adding a primary key of
+    //the table
+    this.get_querystring = function(dom_record=null){//page_descendant
+        //
+        //Get the querystring of the parent page of records; x is the parent
+        //query string before overring it.
+        var qstring = this.old_get_querystring(dom_record);
+        //
+        //Add the primary key of this record
+        qstring.primarykey = this.primarykey;
+        //
+        //Return the richer query string
+        return qstring;
+    };    
+    
+    //
+    //On clicking some field on this page, execute the requested method. This 
+    //operation determines if the clicking was done on a parent record object 
+    //or on one of her descendants. 
+    this.onclick_field = function(method){
+        //
+        //Let page be the object for which we need to execute the method. By 
+        //defaut, no page is selected
+        var page=false;
+        //
+        //Get the current dom field by searching the entire document for the 
+        //element with class field because by design, there should be only one 
+        //such element in a page.
+        var df = this.try_current_dom_field();
+        //
+        if (!df){
             //
-            //Display it
-            this.show_error_msg(msg);
+            //There is no dom record found. It may be that 
+            //- no record is actually selected
+            //- a dependant is selectec but not any of its records; perhaps it 
+            //  has none. Determine if it is the latter case.
+           page = this.try_current_js_descendant();
+        }
+        else{
             //
-            //Exit this function; hopefully the get-index-value process will
-            //have displayed the empty data error
+            //Dermine if the selected dom record is a page record or one of her 
+            //descendants
+            //
+            //Check if the dom field has a dom descendant ancestor
+            var dom_descendant = df.closest("descendant");
+            //
+            if (dom_descendant===null){
+                //
+                //This is not a descendant, so we assume that the dom record is on 
+                //this page that is associated with the global variable, page_rcord,
+                //
+                //Invoke the page_record' with the rwquested function 
+                page = page_record;
+            }
+            //This is a descendant; perform the action on a descendant
+            //page. Which one?
+            else{
+                page = this.try_current_js_descendant();
+            }
+        }
+        //
+        //If the page is valid, execute the requested method on teh correct 
+        //object
+        if (page){
+            //
+            page[method]();
+        }
+    };
+
+
+    //Returns the current dom descendant of this page based on the "current" 
+    //attribute. An alert is provided if there is no current selection
+    this.get_current_dom_descendant = function (){
+        //
+        //Try to get the current dom descendant
+        var dd = this.try_current_dom_descendant();
+        //
+        if (!dd){
+            alert ("There is no current descendant selection");
             return false;
         }
         //
-        //Get the querystring that is appropriate for saving this page. A 
-        //descendant page needs more than a page of records
-        var qstring = this.get_querystring(dom_record);
-        //
-        //Save the current record and return, as extra data, the json string
-        //of the saved values, as a name/value pairs object 
-        this.ajax("save_current_record", qstring, "json", function(result){
-            //
-            //The result's extra data is an object of name/value pairs
-            var new_values = result.extra;
-            //
-            //Set the new values to the dom record -- this is a form of a very 
-            //controlled refresh
-            dom_record.update_view(new_values);
-            //
-            //Swith to display mode (i.e, not edit mode)
-            dom_record.switch_record_to_edit(false);
-        });
+        //Return the dom descendant
+        return dd;
     };
+
+    //Returns the current dom descendant of this page based on the "current" 
+    //attribute. No alert is provided if there is no current selection.
+    this.try_current_dom_descendant = function (){
+        //
+        //Formulate the css selector for the current descendant
+        var dselector = "[current='descendant']";
+        //
+        //Retrieve the current dom descendant, searching from the entire 
+        //document.
+        var dd = window.document.querySelector(dselector);
+        //
+        if (dd ===null)
+        {
+            return false;
+        }
+        //
+        //Return the descendant
+        return dd;
+    };
+
+
+
+    //Returns the current js descendant, alerting the user if there
+    //is none. Related to this is the get current dom descendant
+    //and the php page_descendant
+    this.get_current_js_descendant = function (){
+        //
+        //Try to get the current js descendant
+        var jd = this.try_current_js_descendant();
+        //
+        if (!jd){
+            alert ("There is no current descendant selection");
+            return false;
+        }
+        //
+        //Return the dom descendant
+        return jd;
+    };
+
+     //Returns the current js descendant of this page based on the "current" 
+    //attribute. No alert is provided if there is no current selection.
+    this.try_current_js_descendant = function (){
+        //
+        //Formulate the css selector for the current descendant
+        var dd = this.try_current_dom_descendant();
+        //
+        if (!dd)
+        {
+            return false;
+        }
+        //
+        //Retrieve the js decsendant from the dom version
+        //
+        //Get the descendant's table name
+        var tname = dd.getAttribute('id');
+        //
+        //Rerieve the descendant indexd by the table name
+        var jd = this.descendants[tname];
+        //
+        //Retur the js descendant
+        return jd;
+    };
+    
 }
+
 
 //layout is inherted by all pages -- both labels and tables. The layout is 
 //designed to be initialized from a json string derived in a php environment, so
@@ -3234,7 +3832,7 @@ function mode_output(input=null){
 }
 
 //A record is the next largest data structure after field and before sql.
-//The reference table (which is shared with an edit sql) s required for 
+//The reference table (which is shared with an edit sql) is required for 
 //carrying the table indices needed for saving a record
 function record(fields, dbase=null, tname=null, reftable=null, stmt=null, values=null){
     //
@@ -3250,10 +3848,10 @@ function record(fields, dbase=null, tname=null, reftable=null, stmt=null, values
     this.classname = "record";
     //
     //Call the parent mutall prototype (I dont see much gain in having the parent
-    //data object as js does not support abstract methods)
+    //data object as js does not support abstract methods??)
     mutall.call(this);
     //   
-    //Copy data from the given dom record on this page this js record
+    //Copy data from the given dom record on this page to this js record
     //(or vice versa) depending on the direction of the desired movement.
     //The destination is either this js record or the given container. The page 
     //argument is important because different layouts tag fields and records 
@@ -3367,7 +3965,7 @@ function dom_record(view, $page){
     //Get the driver (sql) that drives the given page
     var driver = $page.driver;
     //
-    //Retrieve the reference table; it is valid only for page_table derivatives
+    //Retrieve the reference table; it is valid only for page_records derivatives
     //(This is currently not done using OO style!!)
     var reftable = typeof $page.sql_edit==="undefined" ? null: $page.sql_edit.reftable;
     //
@@ -3377,7 +3975,7 @@ function dom_record(view, $page){
     record.call(this, driver.fields, driver.dbase, $page.tname, reftable, driver.stmt);
     
     //Return the values of this dom record from its view. Note how this method
-    //is declared before using it below
+    //is declared before using it below.
     this.get_values = function (){
         //
         //Initialize the values with nothin
@@ -3474,6 +4072,7 @@ function dom_record(view, $page){
         var fnames ;
         for(var i in indices){
             //
+            //Get the index's field names
             fnames = indices[i];
             //
             //Get out of the for loop after the first index
@@ -3496,7 +4095,7 @@ function dom_record(view, $page){
             //if it is not?
             var field = this.fields[fname];
             //
-            //Retrieve the name of teh primary subfield of the js field. For a normal 
+            //Retrieve the name of the primary subfield of the js field. For a normal 
             //js field this is the same as the field's name. In contrast, that 
             //of a relation field is the id subfield.
             var basic_fname = field.get_fname("primary");
@@ -3530,7 +4129,7 @@ function dom_record(view, $page){
     
     //   
     //Update the dom record, including its view, with the given values. The view
-    //supplies its fieldsa, as well as the primary key attribute of the dom record.
+    //supplies its fields, as well as the primary key attribute of the dom record.
     //This is important, otherwise the newly added record is not equal to the 
     //older records -- which means that it may not immediately support such 
     //operations as delete, which rely on the primary key of a record

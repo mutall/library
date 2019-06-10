@@ -11,7 +11,7 @@ class item_closing_balance extends item_binary {
     //
     public function __construct($record) {
         //
-        parent::__construct($record, "client", "closing_balance");
+        parent::__construct($record, "client", "closing_balance", "Amount to Pay");
         //
         //Closing balance is an aesthetic item; it is not used for calculating 
         //itself. In a report, it is simply aesthetic.

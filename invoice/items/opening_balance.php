@@ -52,7 +52,7 @@ class item_opening_balance extends item {
         
         //
         //The driver of the opening balance is client
-        parent::__construct($record, "client");
+        parent::__construct($record, "client", "Opening Balance");
     }
         
     
@@ -87,24 +87,23 @@ class item_opening_balance extends item {
         //balances
         $amount = "if($discrepancy, initial.amount, $a)";
         //
+        //Compute the current month and year to support formualtion of the 
+        //1st day of the current period
+        $date =
+            $this->record->invoice->year
+            ."-"
+            .$this->record->invoice->month
+            ."-01";    
+        //
         return $this->chk(
             "select "
                 //
                 //Client messages
+                //The first day of current period is the date to be associated
+                //with the opening balance
+                ."'$date' as date, "
                 //
-                //Report on discrepancy between initial and current automatically
-                //calculated balances 
-                //
-                . "auto.amount as prev_closing_balance, "
-                . "initial.amount as initial_blance, "
-                . "initial.date as inital_bal_date, "
-                ."$discrepancy as discrepancy, "
-                //
-                //Report on the differential amounts. The user has to decide what 
-                //to do with them.
-                ."auto.amount - initial.amount as difference, "
-                                //
-                //Compute the actuak opening balance ammount, give the intial 
+                //Compute the actual opening balance ammount, give the intial 
                 //and auto versons
                 ."($amount) as amount, "
                  //
@@ -252,7 +251,7 @@ class item_initial_balance extends item_unary{
     public function __construct($record) {
         //
         //The driver of manual balance is the initial balance table
-        parent::__construct($record, "balance_initial");
+        parent::__construct($record, "balance_initial", "Opening Balance");
         //
         $this->aesthetic=true;
     }
@@ -447,9 +446,9 @@ class item_auto_balance extends item_unary{
     
     public function __construct($record) {
         //
-        //Auto-generated opening balances are driven by teh closing balance 
-        //table
-        parent::__construct($record, "closing_balance");
+        //The closing balance of the previous month is the opening balance of 
+        //the current month
+        parent::__construct($record, "closing_balance", "Opening Balance");
         //
         //
         $this->aesthetic=true;

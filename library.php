@@ -6,6 +6,46 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+//Modelling the input type of a field: input, checkbox, textarea, select, etc
+//Search term: input::input
+class input extends mutall{
+    //
+    //The parent field name must be protected -- otherwise json will fail with 
+    //recursion error
+    protected $parent; 
+    //
+    //Tagname of this element
+    public $tag_name;
+    //
+    //The default tag name of an input element is input
+    function __construct(driver_field $parent, $tag_name='input'){
+        //
+        $this->parent = $parent;
+        //
+        $this->tag_name = $tag_name;
+        //
+        //Initialize the parent mutall object
+        parent::__construct();
+    }
+}
+
+//The checkbox input tag modelling
+class input_checkbox extends input{
+    //
+    function __construct(driver_field $parent){
+        parent::__construct($parent, "checkbox");
+    }
+}
+
+//Input textarea modelling. A text area has no width
+class input_textarea extends input{
+    //
+    function __construct(driver_field $parent){
+        parent::__construct($parent, "textarea");
+    }
+    
+}
+
 //This class is extended by all mutall objects, i.e., its the root of all 
 //mutall -compatible classes. The key property is classname which is used
 //for activation purposes???
@@ -399,8 +439,9 @@ class mutall {
     }
 
     //Returns the true if the login credentials can be found in session variables. 
-    //The credentails are bound to teh reference variable.
-    //It fails with an exception if the user is not logged
+    //The credentails are bound to the reference variable. It fails with an 
+    //exception if the user is not logged. This method can be called from any
+    //mutall object, so it is implemented at the highest level possible
     function get_login(&$login) {
         //
         if (!$this->try_login($login)) {
@@ -416,7 +457,12 @@ class mutall {
         if (isset($_SESSION['login'])) {
             //
             $login = $_SESSION['login'];
-            return true;
+            //
+            //Verify that indeed the login session variable has the details we 
+            //need
+            if (isset($login->username) && isset($login->password)) {
+                return true;
+            }
         }
         return false;
     }
@@ -460,28 +506,18 @@ class mutall {
         return $json;
     }
 
-    //Offload properties from the given static input to this mutall object with
-    //an option for activating them or not. Under what circumstaces is activation
-    //necessary? All the indications are that we it should not be done, 
-    //particulary for pages that re-calls themselves. In the case of a simple 
-    //page_record refresh it caused a re-build of page_record (which is not
-    //a trivial page) and slowed down process. Hence the action was switched off
-    function offload_properties($input, $activate = null) {
+    //Offload properties from the given static input to this mutall object.
+    function offload_properties($input) {
         //
-        //Proceed only if the input is an object. (What about an array?)
-        if (!is_object($input)) {
-            return;
-        }
-        //
-        //The input is an object. Offfload its key/value pairs
+        //The input is an object. Offload its key/value pairs
         foreach ($input as $key => $value) {
             //
-            //Ignore this property if it is not already set (by the 
+            //Ignore this property if it is already set (by the 
             //constructor) or if the set value is null
             if (!isset($this->$key) || is_null($this->$key)) {
                 //
-                //Set the property -- activating it if necessaty
-                $this->$key = is_null($activate) ? $value : $this->activate($value);
+                //Set the property
+                $this->$key = $value;
             }
         }
     }
@@ -1052,14 +1088,14 @@ class dbase_mutall_data extends dbase {
             values
                 (?, ?, ?, ?)
          on duplicate key update 
-                sql_edit=?, 
-                sql_selector=?, 
-                error=?
+                sql_edit = values(sql_edit), 
+                sql_selector = values(sql_selector), 
+                error = values(error)
         ");
         //
         //Sql bind the variables to their matching parameters
-        $this->insert->bind_param("sssssss", $this->entity, $this->sql_edit, $this->sql_selector, $this->error, $this->sql_edit, $this->sql_selector, $this->error
-        );
+        $this->insert->bind_param("isss", $this->entity, $this->sql_edit, 
+                                          $this->sql_selector, $this->error);
 
         //
         //Step through all the databases of mutall_data database
@@ -1087,8 +1123,8 @@ class dbase_mutall_data extends dbase {
     //this mutall data database 
     function serialize_entities(dbase $db) {
         //
-        //Select all the entities of the given database
-        $all = $this->chk("
+        //Let $all be all the entities of the given database
+        $all_entities = $this->chk("
             select
                 entity.entity,
                 entity.name
@@ -1099,7 +1135,9 @@ class dbase_mutall_data extends dbase {
                 dbase.name='$db->dbname'
         ");
         //
-        //Select all the serialized entities of the same given database
+        //Let $serilaized be the all the entities of the same given database 
+        //that are serialized. (This will not take care of entities that have 
+        //been modified!!! Only brand new enties)
         $serialized = $this->chk("
             select 
                 entity.entity 
@@ -1113,13 +1151,14 @@ class dbase_mutall_data extends dbase {
                 dbase.name='$db->dbname'
         ");
         //
-        //Query all those entities of the given database that are not serialized
+        //Query all those entities of the given database that are not 
+        //serialized
         $result = $this->query("
             select 
                 all_entities.entity,
                 all_entities.name
             from
-                ($all) as all_entities 
+                ($all_entities) as all_entities 
                 left join ($serialized) as serialized on 
                     serialized.entity=all_entities.entity
             where
@@ -1132,8 +1171,12 @@ class dbase_mutall_data extends dbase {
             //Set the public entity
             $this->entity = $row['entity'];
             //
-            //Serialize entity
+            //Serialize entity, binding the edit and selector properties to the
+            //serialized versions
             $this->serialize_entity($db, $row['name']);
+            //
+            //Now execute the bounded serialization
+            $this->insert->execute();
         }
     }
 
@@ -1155,13 +1198,14 @@ class dbase_mutall_data extends dbase {
             $this->error = null;
         } catch (Exception $ex) {
             //
-            //Set the error message
-            $this->error = $ex->getMessage();
-        } finally {
+            //Compile the full message, including the stacktrace. The stack trace
+            //is toolonge
+            //$trace = $ex->getTraceAsString();
+            $msg = $ex->getMessage();
             //
-            //Now execute the bounderd serialization
-            $this->insert->execute();
-        }
+            //Set the error message
+            $this->error = "$msg";
+        } 
     }
 
 }
@@ -1395,7 +1439,7 @@ class page extends querystring {
         parent::__construct($qstring->arr);
         //
         //Bind the optional argument; this is done after initializing the
-        //parent so that we have full access to the srvievs defiend on the 
+        //parent so that we have full access to the services defined on the 
         //mutall object. The predefined default means that the binding can nver
         //fail.
         //
@@ -1755,10 +1799,58 @@ class page_table extends page {
         parent::__construct($qstring);
         //
         //Initialize the sql_edit property for access in javascript. The driver 
-        //is not as important as this
+        //is not as important as this. (This looks questionable????)
         $this->sql_edit = $this->get_sql_edit();
     }
 
+    //Construct a new empty record to add to the list of the ones showing on 
+    //this page. The new record is laid out in the prescribed format; it will be
+    //prefilled with parent record primary key data if this method was called
+    //by a descendant
+    function add_record($layout_type = null) {
+        //
+        //Bind the layout type, updating this class's property; the get_layout
+        //method used later in ths function relies on this fact. Note that this 
+        //method is called by an object whose layout we would like to be the one 
+        //specified in the argument. This is ok, even if this page may be part 
+        //of a complex record; the two objects (which ones ?) do not interfere 
+        //with each other. (this is not very clear)
+        $this->bind_arg('layout_type', $layout_type);
+        //
+        //Use this query's parent driver (sql_edit) to derive a new record. Note
+        //that the parent drive of page records is an sql_edit; that of the 
+        //records page is an sql formulated from the sql_edit
+        $driver = $this->sql_edit;
+        //
+        //Compile values (object) for pre-filing the new record; they come from 
+        //a parent record, if any. A page_descendant has a parent; a page_record 
+        //has none.
+        $values = $this->get_parent_primary_values();
+        //
+        //Compile the new partially filled in record
+        $record = $driver->get_record($values);
+        //
+        //Get the layout; we rely on the layout_type set above.
+        $layout = $this->get_layout();
+        //
+        //Records are always added in input mode
+        $mode = new mode_input();
+        //
+        //Display the record (thus generating the necessary html code 
+        //requested by the client)
+        $record->display_data($this, $layout, $mode);
+    }
+    
+    //
+    //Returns the primary key values of a parent record. By default, this 
+    //page_records object has no parent; so there are no values.
+    function get_parent_primary_values() {//page_records
+        //
+        //Returns an empty list of values object
+        return new stdClass();
+    }
+
+    
     //Delete the selected (single) record from this pages database
     function delete_record($primarykey = null) {
         //
@@ -2076,7 +2168,7 @@ class page_records extends page_table {
     //The default limit is the full one
     public $limit = self::full_limit;
 
-    //Construct a page to display a list of records base on a table
+    //Construct a page to display a list of records based on a table
     //This method illustrates the Mutall's mechanism of interfacing the PHP and 
     //Javascript objects. The full signature of this method version is:=
     //
@@ -2161,59 +2253,13 @@ class page_records extends page_table {
         return $sql;
     }
 
-    //Construct a new empty record to add to the list of the ones showing on 
-    //this page. The new record is laid out in the prescribed format; it will be
-    //prefilled with parent record primary key data if this method was called
-    //by a descendant
-    function add_record($layout_type = null) {
-        //
-        //Bind the layout type, updating this class's property; the get_layout
-        //method used later in ths function relies on this fact. Note that this 
-        //method is called by an object whose layout we would like to be the one 
-        //specified in the argument. This is ok, even if this page may be part 
-        //of a complex record; the two objects (which ones ?) do not interfere 
-        //with each other. (this is not very clear)
-        $this->bind_arg('layout_type', $layout_type);
-        //
-        //Use this query's parent driver (sql_edit) to derive a new record. Note
-        //that the parent drive of page records is an sql_edit; that of the 
-        //records page is an sql formulated from the sql_edit
-        $driver = $this->sql_edit;
-        //
-        //Compile values (object) for pre-filing the new record; they come from 
-        //a parent record, if any. A page_descendant has a parent; a page_record 
-        //has none.
-        $values = $this->get_parent_primary_values();
-        //
-        //Compile the new partially filled in record
-        $record = $driver->get_record($values);
-        //
-        //Get the layout; we rely on the layout_type set above.
-        $layout = $this->get_layout();
-        //
-        //Records are always added in input mode
-        $mode = new mode_input();
-        //
-        //Display the record (thus generating the necessary html code 
-        //requested by the client)
-        $record->display_data($this, $layout, $mode);
-    }
-
-    //
-    //Returns the primary key values of a parent record. By default, this 
-    //page_records object has no parent; so there are no values.
-    function get_parent_primary_values() {//page_records
-        //
-        //Returns an empty list of values object
-        return new stdClass();
-    }
 }
 
 //
 //A page_selector is an extension of page_records that was designed to support
 //capturing of data that links the record of some table to its foreign
 //key counterpart. It has the following unique behaviour:-
-//- It has its own interaction file, page_selector.php, which overrides/extends 
+//- It has its own interaction php file, page_selector, which overrides/extends 
 //  that of page_records.
 //- It has an output, id, and primary key values (i.e., subfields )
 //  associated with the foreign key table
@@ -2299,7 +2345,7 @@ class page_selector extends page_records {
 
 //This class exytends the page_table by (a) being specific to some record identified
 //identified by a primary key and (b) being able to display the descendants
-class page_record extends page_table {
+class page_record extends page_records {
 
     //
     //
@@ -3146,23 +3192,23 @@ class page_login extends page {
     }
 
     //The login page is special in that it is driven by a record that is NOT
-    //derived from an sql statement executed on a database
+    //derived from an sql statement executed on a database. This method returns
+    //such a record 
     function get_driver() {//page_login
         //
         //Set this page's data component; its of record type.
         //
-        //Define the user name and password fields. The mutall field is the 
-        //smallest database savable, i.e., data that can be saved as a unit, element
+        //Define the user name and password fields. A driver field is the 
+        //smallest data unit that can drive a page. Other units are records, sql,
+        //etc.
         $fusername = new driver_field("username");
         $fpassword = new driver_field("password");
         //
         //Collect the user login credentials as a list of indexed fields
         $fields = array("username" => $fusername, "password" => $fpassword);
         //
-        //Create a record using the fields onnly, i.e., without reference to
-        //a database and its data sources -- table name or sql statement.
-        //But, the Mutall record is an extension of a writeable object. A 
-        //writeable must have a database. This is contradictory
+        //Use the fields to create a login record; the pother arguments of a
+        //record constructor are optional
         $record = new driver_record($fields);
         //
         //Optional arguments can be supplied after the page creation
@@ -3495,6 +3541,7 @@ class layout_label extends layout {
 
 }
 
+
 //The mode of displaying the data. Currently only one property is known:type. Why
 //promote this to a class then? To allow the use of a display arguement that 
 //whose class is known, e.g., display(layout $x, mode $y) 
@@ -3707,6 +3754,10 @@ class driver_field extends driver {
     //The titke of a fiels is is long friendly name
     public $title;
     //
+    //The tagname used for representing the input element of this field, e.g., 
+    //input, checkbox, textarea, select, etc.
+    public $tag_name;
+    //
     //The field value (expression) is important for formulating sql statements
     //for selecting data. This makes sense only for the basic fields. Compound
     //fields, e.g., the foreign key, do not have a xvalue; their subfields do. 
@@ -3719,39 +3770,67 @@ class driver_field extends driver {
     public $total = 0;
     //Marks field as eiher hidden or not. Hidden fields are not displayed
     public $hidden = false;
-
     //
-    //A basic field is characterised by a value of type expression and an 
-    //optional name
-    function __construct($name, expression $xvalue = null, $title = null) {
+    //A basic field is characterised by a nme, value as an expression and 
+    //any other user suplied data.
+    function __construct($name, expression $xvalue = null, $description=null) {
         //
         $this->name = $name;
-        $this->title = $title;
         //
-        //If there is no value, use teh null expression
+        //If there is no value, use the null expression
         $this->xvalue = is_null($xvalue) ? new expression_null : $xvalue;
         //
         //Initialize the inherited driver
         parent::__construct();
+        //
+        //Offload the descriptions to this column -- if available
+        if (!is_null($description)){
+            $this->offload_properties($description);
+        }
+        //
+        //Set the input element
+        $this->element = $this->get_input_element();
+    }
+    
+    //Returns teh mkst suitable input element of this field
+    function get_input_element(){
+        //
+        //
+        //Fields named 'valid' or prefixed by is_ are boolean 
+        if ($this->name=='valid'){
+            return new input_checkbox($this);
+        }
+        //
+        //Interger fields of size will be considered boolean
+        if (isset($this->length) && $this->length==1){
+            return new input_checkbox($this);
+        }
+        //
+        //Any field longer than 100 characters witth be considered a text area
+        if (isset($this->length) && $this->length>100){
+            return new input_textarea($this);
+        }
+        //
+        //By default, the input tag will be used for capruring inputs
+        return new input($this);
     }
 
-    //The input html tag of a normal field is a text input box for a normal fiels
+    //The input html tag of a normal field is a text input box for a normal fields
+    //input::display_input_tag
     function display_input_tag(page $page, mode $mode, driver_record $parent) {//field
+        //
+        //Display the input value of the current element. Typically this is an
+        //input box wth the value, a checkbox with correct check, etc.
+        //
+        //The display is going to be driven by $this->element with the following 
+        //arguments: $this, $mode, $parent
         //
         $fname = $this->name;
         //
         echo "<input";
         //
-        //The default input type is text; it is password if the field
-        //name suggests so.
-        if ($fname === "password") {
-            echo " type='password'";
-        }
-        //
-        //By default the type is plain text
-        else {
-            echo " type='text'";
-        }
+        //Set the input type
+        echo " type='{$this->get_type()}' ";
         //
         echo " name='$fname'";
         //
@@ -3768,8 +3847,37 @@ class driver_field extends driver {
         //Close the input
         echo " />";
     }
+    
+    //Returns teh best input type for a field based on the field name and the
+    //data type
+    function get_type(){
+        //
+        //Try setting input type based on field type if present
+        if (isset($this->type)){
+            //
+            switch($this->type){
+                case "date": return "date";
+                case "double": return "number";
+                case "int": return "number";
+                case "timestamp": return "date";
+            }   
+        }
+        //
+        //If not decided yet, try setting input type based on the field name
+        switch($this->name){
+            //
+            //Set input type based on the field name
+            case "password": return "password"; 
+            case "date": return "date"; 
+            case "email": return "email";
+        }
+        //
+        //At this point just return the default
+        return "text";
+    }
 
     //The output html element of a normal field is some text content
+    //input::display_output_tag
     function display_output_tag(page $page, mode $mode, driver_record $parent) {
         //
         //Open our own user-defined output tag
@@ -3780,6 +3888,8 @@ class driver_field extends driver {
         //
         //Close the data arguments
         echo ">";
+        //
+        //Display the output value of the current element.
         //
         //Output the value of this field as the text content -- if it exists
         //from the parent record's values
@@ -3950,9 +4060,8 @@ class driver_field extends driver {
         $this->display_metadata_tags($mode, $parent);
     }
 
-    //An ordinary field has no metadata; so this does noting
+    //An ordinary field has no metadata; so this does nothing
     function display_metadata_tags(mode $mode, driver_record $parent) {
-        
     }
 
 }
@@ -3999,7 +4108,7 @@ class column extends driver_field {
     public $fk_col_name;
 
     //Initialize a column using the given description. The description can be
-    //eiter an array (as returned by column_fields() or a stdClas object as
+    //either an array (as returned by column_fields() or a stdClas object as
     //assumed in column mutall::activate. Only publicly defined properties
     //will be used. The name and source table of the column must be known.
     //The description is optional 
@@ -4014,10 +4123,7 @@ class column extends driver_field {
         //Initialize the basic field. The local name of the field is the 
         //same as theh column name. Its value is the same as column name and
         //the base sql is that of the column
-        parent::__construct($name, $value);
-        //
-        //Offload the descriptions to this column
-        $this->offload_properties($description);
+        parent::__construct($name, $value, $description);
     }
 
     //Initialization of sql_edit using an ordinary column simply adds itself 
@@ -5285,7 +5391,7 @@ class sql_edit extends driver_sql {
 
     //The reference table is key to this process; by default sql_edit is composed
     //of all the fields of the reference table. Otherwise it returns only the
-    //primary key column
+    //primary key column as in the case of a page selector
     function __construct(dbase $dbase, $tname, $all_fields = true) {
         //
         //Set the fields provided in the arguments

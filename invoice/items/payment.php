@@ -11,7 +11,7 @@ class item_payment extends item_unary{
     //
     public function __construct($record) {
         //
-        parent::__construct($record, "payment");
+        parent::__construct($record, "payment", "Payment Received");
         //
         //Payments credit a client's invoice
         $this->is_credit = true;
@@ -37,6 +37,9 @@ class item_payment extends item_unary{
                 //
                 //The acutal date when teh amount was paid
                 ."payment.date, "
+                //
+                //Add the reference no.
+                ."payment.ref, "
                 //
                 //The amount paid; it is a credit ampint
                 ."payment.amount * ".invoice::credit." as amount "

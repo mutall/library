@@ -17,7 +17,7 @@ class item_credit extends item_unary {
     //
     public function __construct($record) {
         //
-        parent::__construct($record, "credit");
+        parent::__construct($record, "credit", "Credit Note");
         //
         //Credits credit a client's invoice
         $this->is_credit = true;
@@ -81,7 +81,7 @@ class item_debit extends item_unary {
     //
     public function __construct($record) {
         //
-        parent::__construct($record, "debit");
+        parent::__construct($record, "debit", "Debit Note");
         //
         //Debits do not credit teh client's invoice
         $this->is_credit = false;

@@ -47,7 +47,7 @@ class item_service extends item_binary {
     //
     public function __construct($record) {
         //
-        parent::__construct($record,  "client", "charge");
+        parent::__construct($record,  "client", "charge", "Service Charge");
         //
         //Services are paid in advance, when rent is due
         $this->advance=true;

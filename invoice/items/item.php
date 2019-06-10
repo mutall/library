@@ -24,6 +24,9 @@ abstract class item {
     //and underbar for separating name components
     public $name;
     //
+    //The more descriptive name of an item
+    public $title;
+    //
     //Indicates if the item takes part in the computing of closing balance or 
     //not. For instance, the client is simply a left margin marker; the closing
     //balance item, usually appearing as a right margin of a tabular invoice, 
@@ -40,8 +43,9 @@ abstract class item {
     //
     //An item is charaterized by its parent records and driver entity. 
     //For instance, the water item is driven by water connection, 
-    //rent by agreement, invoice by client, etc.
-    public function __construct(record $record, $driver) {
+    //rent by agreement, invoice by client, etc. The titke is a more descriptive
+    //name
+    public function __construct(record $record, $driver, $title) {
         //
         //Set the parent record of the item, so that we can access sibblings and
         //ancestral data.
@@ -49,6 +53,8 @@ abstract class item {
         //
         //Driver is the starting point of the posting process
         $this->driver = $driver;
+        //
+        $this->title = $title;
         //
         //The name of the item is used in report headings. It is derived from this
         //item's class name, after stripping off the item_ prefix and capitalizing
@@ -111,28 +117,6 @@ abstract class item {
         $this->statements["summary"] = new statement($this, $this->summary(true));
     }
     
-    //
-    //Returns the cuoff period of this item. 
-    //By default, rent and service charges
-    //are charged in advance, so their cutoff period is $n. Expense are from 
-    //previous period, so thoer cuoff period is $n-1.  Closing 
-    //balances is associated with the next period, i.e., $n+1
-    function cutoff($n=0){
-        //
-        return $this->record->invoice->cutoff($n);
-    }
-    
-    //
-    //Does this item take part in a monitor report? If so. Its cutoff needs
-    //to be adjusted, so that data for the invoice period are included or excluded
-    function operational_cutoff($n=0){
-        //
-        //For monitoring purposes, include new data after posting; otherwise 
-        //exclude it, by setting the cutoff date to that of the previous period
-        $x = $this->record->invoice->monitor ? $n: $n-1;
-        //
-        return $this->record->invoice->cutoff($x);
-    }
     
     //Display the data of an item -- depending on the invoice's layout 
     //specification 
@@ -409,6 +393,31 @@ abstract class item {
         //        
         return $sql;
     }
+    
+    //
+    //Returns the cutoff period of this item. 
+    //By default, rent and service charges /are charged in advance, so their 
+    //cutoff period is $n. Expense are from previous period, so their 
+    //cutoff period is $n-1.  Closing balance is associated with the next period, 
+    //i.e., $n+1
+    function cutoff($n=0){
+        //
+        return $this->record->invoice->cutoff($n);
+    }
+    
+    //
+    //Does this item take part in a monitor report? If so, its cutoff needs
+    //to be adjusted, so that data for the invoice period are included or excluded
+    function operational_cutoff($n=0){
+        //
+        //For monitoring purposes, include new data after posting; otherwise 
+        //exclude it, by setting the cutoff date to that of the previous period
+        $x = $this->record->invoice->monitor ? $n: $n-1;
+        //
+        return $this->record->invoice->cutoff($x);
+    }
+    
+    
 }
 
 
@@ -425,10 +434,10 @@ abstract class item {
 abstract class item_unary extends item_binary {
 
     //
-    public function __construct(record $record, $driver) {
+    public function __construct(record $record, $driver, $title) {
         //
         //The storage of unary item is the same as its driver
-        parent::__construct($record, $driver, $driver);
+        parent::__construct($record, $driver, $driver, $title);
     }
 
     //Identifies what manual data for this item is considered valid for 
@@ -538,7 +547,7 @@ abstract class item_binary extends item {
     public $storage;
 
     //
-    public function __construct(record $record, $driver, $storage) {
+    public function __construct(record $record, $driver, $storage, $title) {
         //
         $this->storage = $storage;
         //
@@ -548,7 +557,7 @@ abstract class item_binary extends item {
         //report is simply aesthetic.
         $this->aesthetic = false;
         //
-        parent::__construct($record, $driver);
+        parent::__construct($record, $driver, $title);
     }
 
     //Returns the sql that is used for managing data to be posted in the current

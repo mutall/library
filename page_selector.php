@@ -36,6 +36,16 @@ $page_selector= new page_selector($qstring);
             //
             var page_selector = new page_selector(<?php echo $page_selector; ?>);
         </script>
+            
+        <style>
+            header{
+                height:10%
+            }
+            
+            article{
+                height:90%
+            }
+        </style>
 
 
     </head>
@@ -46,42 +56,44 @@ $page_selector= new page_selector($qstring);
 
         <!-- The header section -->
         <header>
-            <!-- Button for client criteria -->
+             <!--Do a search on the primary key field using the hinted value
+            -->
             <div>
-                <label for ="criteria">Filter Client</label>
-                <!--
-                Do a search on the primary key field using the hinted value
-                -->
-                <input type ="text" id="criteria" onkeyup="page_selector.search_hint(this.value)"/>
+                <label for ="criteria">Filter Client
+                
+                <input 
+                    type ="text" 
+                    id="criteria" 
+                    onkeyup="page_selector.search_hint(this.value)"/>
+                </label>
             </div>
             
-            <!-- Button for the last selection-->
+            <!-- The menus -->
             <div>
-                <!-- The value of this id is the output component of the selector-->
-              Last Selection:<?php echo $page_selector->output; ?>
+                <!-- Return the selected record to the caller-->
+                <input id=return_field type="button" value="Return Selected Record" onclick='page_selector.return_field()'>
+
+                <!-- Create a new record of the type that matches the selector request-->
+                <input id='add_record' type="button" value="Create New Record" onclick='page_selector.create_record()'>
+
+                <!-- Abort the selection, by simply closing the window -->
+                <input id=cancel type=button value="Cancel" onclick="window.close()"/>
             </div>
+            
         </header>
 
         <article>
-
+            
             <?php
+            //
+            //Output the table name from which records are cteated
+            echo "Select the $page_selector->tname"; 
             //
             //Display the the record selector ung he local settings
             $page_selector->display_page();
             ?>
         </article>
 
-        <!-- The footer section -->
-        <footer>
-            <!-- Return the selected record to the caller-->
-            <input id=return_field type="button" value="Return Selected field" onclick='page_selector.return_field()'>
-
-            <!-- View/interact the current table's detailed records -->
-            <input id='view_records' type="button" value="View Records" onclick='page_selector.view_records()'>
-
-            <!-- Abort the selection -->
-            <input id=cancel type=button value="Cancel" onclick="window.close()"/>
-        </footer>
     </body>
 
 </html>
