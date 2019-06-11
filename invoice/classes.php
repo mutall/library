@@ -577,20 +577,6 @@ class emailer extends \PHPMailer\PHPMailer\PHPMailer {
         //the username with the one specified avove; so, it dpes not matter what you
         //type but it has to be a valid email address
         $this->setFrom('mutallcompany@gmail.com', 'Mutall Investment Co. Ltd');
-        //
-        //Set an alternative reply-to address
-        //$mail->addReplyTo('replyto@example.com', 'First Last');
-        //
-        //Set who the message is to be sent to. I should be able to see this email from
-        //my inbox under sent emails
-        //$this->addAddress('mutallcompany@gmail.com', 'Mutall');
-        //
-        //Set the subject line
-        //$this->Subject = 'PHPMailer GMail SMTP test';
-        //
-        //Read an HTML message body from an external file, convert referenced images to embedded,
-        //convert HTML into a basic plain-text alternative body
-        //$this->msgHTML(file_get_contents('contents.html'), __DIR__);
     }
 }
 
@@ -815,6 +801,10 @@ abstract class invoice extends page {
     //invoie month. Hence this property. When true, the invoive will include data
     //capture after the posting; if false, it excluded it. 
     public $monitor;
+    //
+    //The email sending support object derived from phpMail. Usere will override
+    //propertes of the emailer to customize who, e.g., to sene emails to.
+    public $emailer;
          
     //An invoice is characterised by:-
     //- Whether we are reporting data before or after it is posted? This in turn 
@@ -836,6 +826,12 @@ abstract class invoice extends page {
         //Each invoice has a record; set it here using an abstract function 
         //because we cannot instantiate a record, which is abstract.
         $this->record = $this->get_record();
+        //
+        //Create the emailer object (for this invoice), an extension of 
+        //PHPMailer. Specific classes will re-est the default emailer properties
+        //to customize them. E.g., poster_mutall ads CC's phylis and wycliffe
+        $this->emailer = new emailer();
+        
     }
     
     //Initialize this invoice with data from multiple sources, including
@@ -909,19 +905,13 @@ abstract class invoice extends page {
         $this->layout->close_table();
     }
     
-    //Send this invoice as emails of to clients.
+    //Send this invoice as emails of to clients. The emailer property is set 
+    //during creatipn of the invoice
     function email(layout $layout=null, $level=null, $monitor=null){
         //
         //Initialize this invoice with data from multiple sources, including the
         //given arguments
         $this->initialize($layout, $level, $monitor);
-        //
-        //Create the emailer object, an extension of PHPMailer 
-        $this->emailer = new emailer_mutall();
-        //
-        //
-        //Add people to receive the email, eg., wycliffe and phyllis
-        //$this->emailer->AddCC('osoro.wycliff@gmail.com')
         //
         //Retrieve the data that drives the email list
         $results = $this->query();
@@ -1126,19 +1116,17 @@ abstract class record {
     //Compile the complete email; then send it (using PhpMailer)
     function email(){
         //
-        //Get the emailer
+        //Get the emailer from the record's invoice
         $emailer = $this->invoice->emailer;
         //
-        //Initialize the address list
+        //Initialize the address list. This will remove all To addresses; 
+        //the CC and BC will not be cleared.
         $emailer->ClearAddresses();
         //
         //The email is sent to the client's email address. This means that the 
         //record's driver data must return an email.
         $address = $this->result['email'];
         $emailer->addAddress($address);
-        //
-        //Add people to receive the email, eg., wycliffe and phyllis
-        //AddCC('osoro.wycliff@gmail.com')
         //
         //The subject is invoice/statement for the current period -- the same bit
         //that appears in the invoice header
