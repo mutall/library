@@ -223,7 +223,7 @@ function mutall(input=null){
         var fld = new field(name);
         //
         //Offload -- without activation, all the static properties to the field
-        fld.offload(sdata);
+        Object.assign(fld, sdata);
         //
         //Retrieve the field's element
         var element = fld['element'];
