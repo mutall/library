@@ -546,7 +546,13 @@ abstract class item_binary extends item {
     //A binary item has one storage entity where the charges are posted
     public $storage;
 
-    //
+    //A binary item requirs 4 arguments:-
+    //a) the parent record (which should b protected to avoid recursion during 
+    //json deconding
+    //b) the driver table of this item
+    //c) the storage table; in the case of unary items the driver and the storage
+    ////tables are one and the same thing
+    //d) a more decriptive name of the item, fit for reporting purposes
     public function __construct(record $record, $driver, $storage, $title) {
         //
         $this->storage = $storage;
