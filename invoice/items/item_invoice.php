@@ -12,7 +12,7 @@ class item_invoice extends item_binary{
     //
     public function __construct($record) {
         //
-            parent::__construct($record, "client", "invoice", "Current Invoice");
+        parent::__construct($record, "client", "invoice", "Current Invoice");
         //
         //Invoice is not used for calculating the closing alance; its use in
         //display report is purely aesthetic, 

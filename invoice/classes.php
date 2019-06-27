@@ -1263,7 +1263,7 @@ abstract class poster extends invoice {
 
     //Returns the sql that drives the poster invoice. It is bases based  on 
     //clients for whom there is an agreement
-    function get_driver_sql() {
+    function get_driver_sql() {//poster
         //
         //Consider only non teromated agreemsnte
         $terminated = 
@@ -1385,7 +1385,7 @@ abstract class report extends invoice {
     }
     
     //Returns an sql statement, based on this invoice,  that drives this report
-    function get_driver_sql() {
+    function get_driver_sql() {//report
         //
         return $this->dbase->chk(
             "select "
@@ -1399,7 +1399,7 @@ abstract class report extends invoice {
                 //The table driving this process 
                 . "invoice "
                 //
-                //To suppport critaria referencing clent and period
+                //To suppport critaria referencing client and period
                 . "inner join client on invoice.client = client.client "
                 . "inner join period on invoice.period = period.period "
             //
