@@ -1294,7 +1294,7 @@ abstract class poster extends invoice {
                 //
                 //For emailing clients. Replace this with the client's email 
                 //when ready
-                . "'peterkmuraya@gmail.com' as email "
+                . "if(client.email is null, 'info@mutall.co.ke', client.email) as email "
             . "from "
                 . "client "
                 //
