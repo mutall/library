@@ -37,13 +37,15 @@ abstract class item {
     //does not; only payments and credits do
     public $is_credit = false;
     //
-    //Statements for this item; currently 2 are expected--detailed and summary
+    //Statements for this item; currently 2 are expected--detailed and summary.
+    //A 3rd one, gross, has been added(C. Odhiambo, 2019). These statements are
+    //constructed during display of the invoice.
     public $statements=[];
     //
     //
     //An item is charaterized by its parent records and driver entity. 
     //For instance, the water item is driven by water connection, 
-    //rent by agreement, invoice by client, etc. The titke is a more descriptive
+    //rent by agreement, invoice by client, etc. The title is a more descriptive
     //name
     public function __construct(record $record, $driver, $title) {
         //
@@ -115,6 +117,9 @@ abstract class item {
         //
         //Now prepare the summary statement with parametrizatio on.
         $this->statements["summary"] = new statement($this, $this->summary(true));
+        //
+        //Set the totals of the statements with no parameters.
+        $this->statements["gross"] = new statement($this, $this->gross());
     }
     
     
@@ -198,6 +203,8 @@ abstract class item {
                 //The summary field is called value; by default it is base on 
                 //the amount column of the detailed sql
                 . "sum(detailed.amount) as value "
+                //Select 
+                . ""
             . "from "
                 //
                 //Ensure that the posstage constarint is ommited; i.e., there 
@@ -205,6 +212,27 @@ abstract class item {
                 . "({$this->$fname($parametrized, false)}) as detailed "
         );
     }
+    
+    
+    //Return the total depending on the summary one
+    function gross($parametrized = true) {
+        //
+        return $this->chk(
+            //    
+            "select "
+                //
+                //The sum of the summarized detailed value as amount
+                . "sum(summary.value) as amount "
+            . "from "
+                //
+                //The totals are not set to any condition. The gross is only for 
+                //finding the sum of every items for all records. As such, it is not
+                //parameterized. We therefore set the paramatrized condition on
+                //the summary to false
+                . "({$this->summary(false, false)}) as summary "
+        );
+    }
+    
 
     //Shortcut for $this->query. The design is to ensure that the the reporet
     //erroe is as close as possible to the query that raised it

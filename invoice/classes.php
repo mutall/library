@@ -170,7 +170,7 @@ class layout_tabular extends layout{
             //Open the field tag
             $this->open_item($item);
             //
-            //Now use the invoice's layout to disolay the item
+            //Now use the invoice's layout to display the item
             $item->display();
             //
             //Close the field tag
@@ -856,8 +856,8 @@ abstract class invoice extends page {
         //Prepare statements for all the items
         foreach($this->record->items as $item){
             //
-            //Prepare detailed and summary statements of the item to provide 
-            //data for a parametrized client (or invoice) display. 
+            //Prepare detailed, summary and gross statements of the item to provide 
+            //data for a parametrized client (or invoice) displays. 
             $item->prepare_statements();
         }
          //
@@ -879,7 +879,7 @@ abstract class invoice extends page {
         //given arguments
         $this->initialize($layout, $level, $monitor);
         //
-        //Retrieve the data that drives th display
+        //Retrieve the data that drives the display
         $results = $this->query();
         //
         //Now show the data, modelled along a tabular layout
@@ -901,9 +901,36 @@ abstract class invoice extends page {
             $this->record->display();
         }
         //
+        //Output the the totakls for each item
+        $this->display_gross();
+        //
         //Close the main report tag, e.g., </table>
         $this->layout->close_table();
     }
+    
+    function display_gross() {//invoice
+        //
+        //Initialize this invoice with data from multiple sources, including the
+        //given arguments
+        $this->initialize('layout_tabular', 'gross', null);
+        //
+        //Retrieve the data that drives the display
+        $results = $this->query();
+        //
+        //Now show the data, modelled along a tabular layout
+        //
+        //
+        $result = $results->fetch();
+        //
+        //Populate the this invoice's record with data to be displayed
+        $this->record->populate($result);
+        //
+        //Display this invoice's record in the required (invoice) layout and 
+        //item detail
+        $this->record->display();
+       
+    }
+    
     
     //Send this invoice as emails of to clients. The emailer property is set 
     //during creatipn of the invoice
@@ -991,6 +1018,7 @@ abstract class record {
         //i.e., invoive and opeing balances
         $this->items = [
             'invoice' => new item_invoice($this),
+            //'month' => new item_month($this),
             'opening_balance' => new item_opening_balance($this)
             ];
         //
@@ -1029,8 +1057,8 @@ abstract class record {
         //Fill the record with data, item by item
         foreach($this->items as $item){
             //
-            //Attend to both the detailed and summary statements of an item 
-            foreach(['detailed', 'summary'] as $level){
+            //Attend to both the detailed and summary, and gross statements of an item 
+            foreach(['detailed', 'summary', 'gross'] as $level){
                 //
                 //Get the mutall statetement
                 $statement = $item->statements[$level];

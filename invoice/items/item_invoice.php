@@ -148,7 +148,10 @@ class item_invoice extends item_binary{
                 //
                 //The summary field is called value; by default it is bases on 
                 //th amount comun of the detailed sql
-                . "detailed.id as value "
+                . "detailed.id as value, "
+                //The month and year of the invoice
+                . "detailed.month, "
+                . "detailed.year "
                 
             . "from "
                 //
