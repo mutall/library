@@ -93,8 +93,9 @@ abstract class layout {
             //Invoie is not a money item
             $item->name!=='Invoice'
             //
-            //Onlly the summarised case is considered
-            && $item->record->invoice->level=='summary';
+            //Only the summarised case is considered
+            && ($item->record->invoice->level=='summary'
+                || $item->record->invoice->level=='gross');
         //
         //Ddefine the double class
         $class = $double ? "class='double'": "";    
@@ -928,7 +929,6 @@ abstract class invoice extends page {
         //Display this invoice's record in the required (invoice) layout and 
         //item detail
         $this->record->display();
-       
     }
     
     
