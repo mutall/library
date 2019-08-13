@@ -1344,8 +1344,11 @@ abstract class poster extends invoice {
     //Check if data has been posted
     function already_posted(){
         //
-        //Set the next month
+        //Set the next month. It is from the next month that we can note whether
+        //data has been posted or not. Posted data only exist if the next month
+        //has an opening balance which is the closing balance of the previous month
         $next_month=$this->record->invoice->month+01;
+        //
         //Check if there are any closing balances posted. This is important
         //to ensure that data is not posted twice
         $exit = $this->dbase->chk(
@@ -1386,7 +1389,7 @@ abstract class poster extends invoice {
     //Post the current invoice's items to the database
     function post() {
         //
-        //
+        //If data is posted throw new exception
         if($this->already_posted()){
             throw new \Exception("Data Already posted, Please unpost to post again.");
         }
@@ -1411,8 +1414,11 @@ abstract class poster extends invoice {
     //Check whether data has been un-posted
     function already_unposted(){
         //
-        //Set the next month
+        //Set the next month. It is from the next month that we can note whether
+        //data has been posted or not. Posted data only exist if the next month
+        //has an opening balance which is the closing balance of the previous month
         $next_month=$this->record->invoice->month+01;
+        //
         //Check if there are any closing balances posted. This is important
         //to ensure that data is not posted twice
         $exit = $this->dbase->chk(
@@ -1454,6 +1460,11 @@ abstract class poster extends invoice {
     //Undo the postings of the current period, or those of the entire database
     //if the $current option is set to true
     function unpost($current = null) {
+        //
+        //if data is not already unposted throw new exception
+        if(!$this->already_posted()){
+            throw new \Exception("Data Already posted, Please unpost to post again.");
+        }
         //
         //Bind the optional $current argument; it boolean. 
         if (!page::try_bind_arg ($this, 'current', $current, FILTER_VALIDATE_BOOLEAN)){
