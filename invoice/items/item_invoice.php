@@ -64,9 +64,6 @@ class item_invoice extends item_binary{
         //
         return $sql;
     }
-    
-    
-    
     //Posting a client to create the invoice item. This extends the posting a
     //parent item by inserting the current period record
     //
@@ -83,9 +80,8 @@ class item_invoice extends item_binary{
                     . "'{$this->record->invoice->month}', "
                     . "'{$this->cutoff()}' "
                 . ")" 
-           . "on duplicate key update year=values(year)"
+           . "on duplicate key update year=values(year) "
         );
-        //
         //Then insert the current invoices for all the clients
         //
         //Posting the invoice binary items generally simply creates

@@ -1341,11 +1341,57 @@ abstract class poster extends invoice {
         );
     }
     
-    
+    //Check if data has been posted
+    function already_posted(){
+        //
+        //Set the next month
+        $next_month=$this->record->invoice->month+01;
+        //Check if there are any closing balances posted. This is important
+        //to ensure that data is not posted twice
+        $exit = $this->dbase->chk(
+            "Select "
+                //
+                //All posted data have a clossing balance
+                . "closing_balance.amount "
+            . "From "
+                //
+                //Select from the closing balance (bevcaues every posting must
+                //have it.
+                . "closing_balance "
+                //
+                //We need the invoice and the period to ensure we have 
+                //the desired invoice and periods
+                . "inner join invoice on closing_balance.invoice = invoice.invoice "
+                //
+                //To suppot test of balances in the cperiod after current
+                . "inner join period on invoice.period=period.period "
+            . "where "
+                //Set the desired period from the invoice class
+                . "period.month='{$next_month}' "
+                //
+                . "and period.year='{$this->record->invoice->year}' "
+        );
+        //
+        //If any results are provide the data has been posted.
+        $data = $this->query($exit);
+        //
+        //Fetch all results
+        $results=$data->fetchAll(\PDO::FETCH_OBJ);
+        //
+        //Check if there is any data 
+        if($results){
+            return true;
+        }
+    }
     //Post the current invoice's items to the database
     function post() {
         //
-        //post the closing balances because it's prer calculation is affected
+        //
+        if($this->already_posted()){
+            throw new \Exception("Data Already posted, Please unpost to post again.");
+        }
+        //
+        //post the closing balances because it's pre calculation is affected
         //by whether her dependents are posted or not.
         $this->record->items['closing_balance']->post();
         //
@@ -1359,6 +1405,50 @@ abstract class poster extends invoice {
         }
         //
         echo "Ok";
+    }
+    
+    //
+    //Check whether data has been un-posted
+    function already_unposted(){
+        //
+        //Set the next month
+        $next_month=$this->record->invoice->month+01;
+        //Check if there are any closing balances posted. This is important
+        //to ensure that data is not posted twice
+        $exit = $this->dbase->chk(
+            "Select "
+                //
+                //All posted data have a clossing balance
+                . "closing_balance.amount "
+            . "From "
+                //
+                //Select from the closing balance (bevcaues every posting must
+                //have it.
+                . "closing_balance "
+                //
+                //We need the invoice and the period to ensure we have 
+                //the desired invoice and periods
+                . "inner join invoice on closing_balance.invoice = invoice.invoice "
+                //
+                //To suppot test of balances in the cperiod after current
+                . "inner join period on invoice.period=period.period "
+            . "where "
+                //Set the desired period from the invoice class
+                . "period.month='{$next_month}' "
+                //
+                . "and period.year='{$this->record->invoice->year}' "
+        );
+        //
+        //If any results are provide the data has been posted.
+        $data = $this->query($exit);
+        //
+        //Fetch all results
+        $results=$data->fetchAll(\PDO::FETCH_OBJ);
+        //
+        //Check if there is any data 
+        if($results){
+            return true;
+        }
     }
 
     //Undo the postings of the current period, or those of the entire database
