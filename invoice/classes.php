@@ -1341,16 +1341,20 @@ abstract class poster extends invoice {
         );
     }
     
-    //Check if data has been posted
+    //Check if data has been posted or not. This is important to ensure that 
+    //data is not posted twice
     function already_posted(){
         //
         //Set the next month. It is from the next month that we can note whether
-        //data has been posted or not. Posted data only exist if the next month
-        //has an opening balance which is the closing balance of the previous month
-        $next_month=$this->record->invoice->month+01;
+        //data has been posted or not. 
+        //Posted data only exist if the next month has an opening balance 
+        //which is the saved closing balance of this month. 
+        //Data is unposted if the next month in question has no opening balance 
+        //which is the saved closing balance of the previous month
+        $cuttoff_date=$this->record->invoice->cutoff(1);
+        
         //
-        //Check if there are any closing balances posted. This is important
-        //to ensure that data is not posted twice
+        //Formulate query for checking if there are any closing balances posted. 
         $exit = $this->dbase->chk(
             "Select "
                 //
@@ -1358,7 +1362,7 @@ abstract class poster extends invoice {
                 . "closing_balance.amount "
             . "From "
                 //
-                //Select from the closing balance (bevcaues every posting must
+                //Select from the closing balance (because every posting must
                 //have it.
                 . "closing_balance "
                 //
@@ -1366,20 +1370,20 @@ abstract class poster extends invoice {
                 //the desired invoice and periods
                 . "inner join invoice on closing_balance.invoice = invoice.invoice "
                 //
-                //To suppot test of balances in the cperiod after current
+                //To suppot test of balances in the period after current
                 . "inner join period on invoice.period=period.period "
             . "where "
                 //Set the desired period from the invoice class
-                . "period.month='{$next_month}' "
-                //
-                . "and period.year='{$this->record->invoice->year}' "
+                . "period.month= month('{$cuttoff_date}') "
+                //Set the year from the invoice class
+                . "and period.year=year('{$cuttoff_date}') "
         );
         //
         //If any results are provide the data has been posted.
-        $data = $this->query($exit);
+        $data = $this->dbase->query($exit);
         //
         //Fetch all results
-        $results=$data->fetchAll(\PDO::FETCH_OBJ);
+        $results=$data->fetch();
         //
         //Check if there is any data 
         if($results){
@@ -1410,60 +1414,14 @@ abstract class poster extends invoice {
         echo "Ok";
     }
     
-    //
-    //Check whether data has been un-posted
-    function already_unposted(){
-        //
-        //Set the next month. It is from the next month that we can note whether
-        //data has been posted or not. Posted data only exist if the next month
-        //has an opening balance which is the closing balance of the previous month
-        $next_month=$this->record->invoice->month+01;
-        //
-        //Check if there are any closing balances posted. This is important
-        //to ensure that data is not posted twice
-        $exit = $this->dbase->chk(
-            "Select "
-                //
-                //All posted data have a clossing balance
-                . "closing_balance.amount "
-            . "From "
-                //
-                //Select from the closing balance (bevcaues every posting must
-                //have it.
-                . "closing_balance "
-                //
-                //We need the invoice and the period to ensure we have 
-                //the desired invoice and periods
-                . "inner join invoice on closing_balance.invoice = invoice.invoice "
-                //
-                //To suppot test of balances in the cperiod after current
-                . "inner join period on invoice.period=period.period "
-            . "where "
-                //Set the desired period from the invoice class
-                . "period.month='{$next_month}' "
-                //
-                . "and period.year='{$this->record->invoice->year}' "
-        );
-        //
-        //If any results are provide the data has been posted.
-        $data = $this->query($exit);
-        //
-        //Fetch all results
-        $results=$data->fetchAll(\PDO::FETCH_OBJ);
-        //
-        //Check if there is any data 
-        if($results){
-            return true;
-        }
-    }
-
+    
     //Undo the postings of the current period, or those of the entire database
     //if the $current option is set to true
     function unpost($current = null) {
         //
-        //if data is not already unposted throw new exception
+        //if there is no data to unpost throw new exception
         if(!$this->already_posted()){
-            throw new \Exception("Data Already posted, Please unpost to post again.");
+            throw new \Exception("No Data to Unpost, Please post to unpost again.");
         }
         //
         //Bind the optional $current argument; it boolean. 
