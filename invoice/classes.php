@@ -903,7 +903,7 @@ abstract class invoice extends page {
         }
         //
         //Output the the totals for each item
-        if ($layout!=='layout_mutall'){
+        if (get_class($this->layout)!== 'invoice\layout_mutall'){
             //
             //
             $this->display_gross();
