@@ -2076,7 +2076,7 @@ class page_table extends page {
             //Add the leading comma and compile the field name. 
             $fnames .= "$comma `$fname`";
             //
-            //Add the leading comma and compile the field name. 
+            //Add the leading comma and compile the field value. 
             $xvalues .= "$comma $ivalue";
             //
             //Add the update component

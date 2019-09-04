@@ -104,7 +104,7 @@ try {
         ob_start();
         //
         //Execute the requested function and consider it's returned value as the 
-        //extra data. Note that this is to allow us  to call the method without
+        //extra data. Note that that it is allowed to call the method without
         //any parameters because they are all optional
         $extra = $obj->$method();
         //

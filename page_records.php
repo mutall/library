@@ -76,6 +76,16 @@ $page_records= new page_records($qstring);
                     onclick='page_records.onchange(this)' />
             </div>
             
+            <!-- Display Mode group-->
+            <div id='gmode'>
+                <label for='mode'>Show Input Mode</label>
+                <input 
+                    type ='checkbox' 
+                    id='mode' 
+                    <?php echo $page_records->get_qstring_value("mode", true);?>
+                    onclick='page_records.onchange(this)' />
+            </div>
+            
             <!-- Selector group-->
             <div id="gselector">
                 <label for='selector'>Show Multi-Record Selector</label>
@@ -85,8 +95,26 @@ $page_records= new page_records($qstring);
                     <?php echo $page_records->get_qstring_value("selector", true);?>
                     onchange='page_records.onchange(this)'/>
             </div>
-            
-            <div id='menus'>
+            <!-- This tag is needed for reporting mutall errors. On clicking
+            clear the error--> 
+            <p id='error' onclick='this.innerHTML=""'></p>
+
+
+        </header>
+
+        <!-- Capture  the onscroll event (vertical) for this articles node -->
+        <article onscroll = "page_records.vscroll(this)">
+
+            <?php
+            //
+            //Display this page using the local settings, i.e.,layout and mode, 
+            // defined during construction
+            $page_records->display_page();
+            ?>
+        </article>
+
+        <!-- The footer section -->
+        <footer>
             <!-- View a detailed version of the selected record -->
             <input 
                 id=view_record 
@@ -142,33 +170,8 @@ $page_records= new page_records($qstring);
                 id="search" 
                 value='Refresh' 
                 onclick="page_records.search_criteria()" />
-            <!--
-            Move back -->
-            <input 
-                type ="button" 
-                id="back" 
-                value='Back' 
-                onclick="window.close()" />
 
-        </div>
-
-        </header>
-
-        <!-- Capture  the onscroll event (vertical) for this articles node -->
-        <article onscroll = "page_records.vscroll(this)">
-            
-            <!-- This tag is needed for reporting mutall errors. On clicking,
-            the error is cleared. The tag is moved to the article so as there
-            is more room there (for display) --> 
-            <p id='error' onclick='this.innerHTML=""'></p>
-
-            <?php
-            //
-            //Display this page using the local settings, i.e.,layout and mode, 
-            // defined during construction
-            $page_records->display_page();
-            ?>
-        </article>
+        </footer>
 
     </body>
 

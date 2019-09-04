@@ -902,8 +902,12 @@ abstract class invoice extends page {
             $this->record->display();
         }
         //
-        //Output the the totakls for each item
-        $this->display_gross();
+        //Output the the totals for each item
+        if ($layout!=='layout_mutall'){
+            //
+            //
+            $this->display_gross();
+        }
         //
         //Close the main report tag, e.g., </table>
         $this->layout->close_table();
