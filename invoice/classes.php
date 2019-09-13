@@ -12,7 +12,7 @@ require_once "../library/invoice/items/opening_balance.php";
 require_once "../library/invoice/items/payment.php";
 require_once "../library/invoice/items/services.php";
 require_once "../library/invoice/items/item_invoice.php";
-require_once '../library/invoice/items/loan.php';
+//require_once '../library/invoice/items/loan.php';
 
 //
 //A layout is how the infomation on  page is presented. There are two different 
