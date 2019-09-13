@@ -12,6 +12,7 @@ require_once "../library/invoice/items/opening_balance.php";
 require_once "../library/invoice/items/payment.php";
 require_once "../library/invoice/items/services.php";
 require_once "../library/invoice/items/item_invoice.php";
+require_once '../library/invoice/items/loan.php';
 
 //
 //A layout is how the infomation on  page is presented. There are two different 
@@ -97,7 +98,7 @@ abstract class layout {
             && ($item->record->invoice->level=='summary'
                 || $item->record->invoice->level=='gross');
         //
-        //Ddefine the double class
+        //Define the double class
         $class = $double ? "class='double'": "";    
         //
         //Output the open item tag; its <td> for tabular cases, field for label
@@ -902,7 +903,7 @@ abstract class invoice extends page {
             $this->record->display();
         }
         //
-        //Output the the totals for each item
+        //Output the the totals for each item only in cases where the display is tabular
         if (get_class($this->layout)!== 'invoice\layout_mutall'){
             //
             //
@@ -1091,7 +1092,8 @@ abstract class record {
             'opening_balance',
             'payment',
             'credit',
-            'debit'
+            'debit',
+            'loan'
         ];
         //
         //Start with no sum
