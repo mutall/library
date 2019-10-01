@@ -3,7 +3,10 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/G:/mutall_projects/library/invoice/classes.php</file>
+            <file>file:/G:/mutall_projects/from_github/library/invoice/items/payment.php</file>
+            <file>file:/G:/mutall_projects/from_github/library/invoice/items/item.php</file>
+            <file>file:/G:/mutall_projects/from_github/library/invoice/items/closing_balance.php</file>
+            <file>file:/G:/mutall_projects/from_github/library/invoice/classes.php</file>
         </group>
     </open-files>
 </project-private>
