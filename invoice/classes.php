@@ -477,7 +477,7 @@ class dbase_local_eureka_waters extends dbase {
     public function __construct() {
         //
         $username = "mutallco";
-        $password = "mutall2015";
+        $password = "mutall_techub";
         $dbname = "eureka_waters";
         //
         parent::__construct($username, $password, $dbname);
