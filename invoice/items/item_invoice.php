@@ -41,7 +41,7 @@ class item_invoice extends item_binary{
                 ."client.title as full_name, "
                 //
                 //Add the clients room number
-                . "room.uid as room_no, "
+                //. "room.uid as room_no, "
                 //
                 //Report on the current invoice period
                 . "{$this->record->invoice->year} as year, "
@@ -53,10 +53,10 @@ class item_invoice extends item_binary{
                 ."client "
                 //
                 //inner join the agreement to assign room to the invoice
-                . "inner join agreement on agreement.client = agreement.agreement "
+                //. "inner join agreement on agreement.client = agreement.agreement "
                 //
                 //
-                ."inner join room on agreement.room = room.room "
+                //."inner join room on agreement.room = room.room "
                 //
                 //Consider only thoses cases that we have a valid agreement
             ."where "
