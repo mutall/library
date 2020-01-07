@@ -1761,7 +1761,7 @@ class field {
         //Get the containing database
         $dbase = $this->stmt->item->record->invoice->dbase;
         //
-        //If teh field name matce sthe name of an exusting table, then, by 
+        //If the field name match the name of an existing table, then, by 
         //mutall naming rule, it is not an attribute.
         if (key_exists($this->name, $dbase->tables)){
             //
