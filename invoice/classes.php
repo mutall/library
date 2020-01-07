@@ -238,7 +238,7 @@ class layout_tabular extends layout{
             . "Total"
         . "</td>"
         . "<td class='double'>"
-            . number_format($statement->item->statements['summary']->results[0][0], 0, ".", ",")
+        . number_format($statement->item->statements['summary']->results[0][0], 0, ".", ",")
         . "</td>"
         ."</tr>";        
         //
