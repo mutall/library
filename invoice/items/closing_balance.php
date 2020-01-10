@@ -296,7 +296,7 @@ class item_closing_balance extends item_binary {
         $sql="";
         //
         //Visit each non-aesthetic item and add it to the uniting sql.
-        //There must at least one item to cpnstruct the closing balance
+        //There must at least one item to construct the closing balance
         //
         foreach($this->record->items as $item){
             //
@@ -324,7 +324,7 @@ class item_closing_balance extends item_binary {
                         . "({$item->detailed_poster($parametrized, false)}) as poster "
                 );
                 //
-                //Re-set the union operatr so that duplicate records are not ignored.
+                //Re-set the union operator so that duplicate records are not ignored.
                $union_operator = " union all ";         
             }
         } 

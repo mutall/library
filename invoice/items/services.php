@@ -179,7 +179,9 @@ class item_service extends item_binary {
                 . "and " . ($postage ? "charge.charge is null " : "true ")
                 //
                 . "and ($amount) is not null"
-                        
+                //
+                //Exclude future contracts
+                ." and agreement.start_date<={$this->record->invoice->cutoff()} "        
         );
     }
     
@@ -191,7 +193,7 @@ class item_service extends item_binary {
            //auto generated records are alwas created for the storage table      
            "insert into "
                 
-                //The storage table is used for holding teh posted data. The
+                //The storage table is used for holding the posted data. The
                 //fields of interest are teh user message
                 . "charge ("
                     //specifify teh user messages
