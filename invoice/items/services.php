@@ -181,7 +181,7 @@ class item_service extends item_binary {
                 . "and ($amount) is not null"
                 //
                 //Exclude future contracts
-                ." and agreement.start_date<={$this->record->invoice->cutoff()} "        
+                ." and agreement.start_date>={$this->record->invoice->cutoff()} "        
         );
     }
     
