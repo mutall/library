@@ -365,7 +365,7 @@ class dbase extends \PDO {
         $this->tables = $this->get_tables();
     }
     
-    //Use th informatio scemea to retirn the tables of this database
+    //Use th informatio scemea to retrive the tables of this database
     function get_tables(){
         //
         //Get the table names
@@ -406,7 +406,7 @@ class dbase extends \PDO {
         //
         try {
             //
-            //This is the reason why theis version works only with queries
+            //This is the reason why this version works only with queries
             //without paramaters
             $stmt->execute();
             //
@@ -485,8 +485,8 @@ class dbase_local_eureka_waters extends dbase {
 
 }
 
-//Modelling the tables of this datbase. For now, the clas does not have musch
-//use, other tan helpint to identify primary and foreign key fieds
+//Modelling the tables of this database. For now, the clas does not have much
+//use, other than helping to identify primary and foreign key fieds
 class table{
     //
     public $name;
@@ -599,7 +599,7 @@ abstract class page {
     //version of this method
     abstract function get_dbase();
     
-    //Display any sql from teh unrelying database
+    //Display any sql from the unrelying database
     function display_sql($sql){
         //
         //Get theh query statement
@@ -904,37 +904,37 @@ abstract class invoice extends page {
         }
         //
         //Output the the totals for each item only in cases where the display is tabular
-        if (get_class($this->layout)!== 'invoice\layout_mutall'){
-            //
-            //
-            $this->display_gross();
-        }
+//        if (get_class($this->layout)!== 'invoice\layout_mutall'){
+//            //
+//            //
+//            $this->display_gross();
+//        }
         //
         //Close the main report tag, e.g., </table>
         $this->layout->close_table();
     }
     
-    function display_gross() {//invoice
-        //
-        //Initialize this invoice with data from multiple sources, including the
-        //given arguments
-        $this->initialize('layout_tabular', 'gross', null);
-        //
-        //Retrieve the data that drives the display
-        $results = $this->query();
-        //
-        //Now show the data, modelled along a tabular layout
-        //
-        //
-        $result = $results->fetch();
-        //
-        //Populate the this invoice's record with data to be displayed
-        $this->record->populate($result);
-        //
-        //Display this invoice's record in the required (invoice) layout and 
-        //item detail
-        $this->record->display();
-    }
+//    function display_gross() {//invoice
+//        //
+//        //Initialize this invoice with data from multiple sources, including the
+//        //given arguments
+//        $this->initialize('layout_tabular', 'gross', null);
+//        //
+//        //Retrieve the data that drives the display
+//        $results = $this->query();
+//        //
+//        //Now show the data, modelled along a tabular layout
+//        //
+//        //
+//        $result = $results->fetch();
+//        //
+//        //Populate the this invoice's record with data to be displayed
+//        $this->record->populate($result);
+//        //
+//        //Display this invoice's record in the required (invoice) layout and 
+//        //item detail
+//        $this->record->display();
+//    }
     
     
     //Send this invoice as emails of to clients. The emailer property is set 
@@ -1549,6 +1549,7 @@ class statement{
     //The sql used for preparing this statement
     public $sql;
     //
+    //change this sql to string to support lawrance sql statements
     function __construct(item $item, $sql){
         //
         $this->item = $item;
